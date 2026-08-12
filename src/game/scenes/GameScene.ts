@@ -354,12 +354,12 @@ export class GameScene extends Phaser.Scene {
     let dx = j.x;
     let dy = j.y;
     if (k) {
-      if (k.A?.isDown || k.LEFT?.isDown) dx -= 1;
-      if (k.D?.isDown || k.RIGHT?.isDown) dx += 1;
-      if (k.W?.isDown || k.UP?.isDown) dy -= 1;
-      if (k.S?.isDown || k.DOWN?.isDown) dy += 1;
+      if (k["A"]?.isDown || k["LEFT"]?.isDown) dx -= 1;
+      if (k["D"]?.isDown || k["RIGHT"]?.isDown) dx += 1;
+      if (k["W"]?.isDown || k["UP"]?.isDown) dy -= 1;
+      if (k["S"]?.isDown || k["DOWN"]?.isDown) dy += 1;
     }
-    const run = j.run || Boolean(k?.SHIFT?.isDown);
+    const run = j.run || Boolean(k?.["SHIFT"]?.isDown);
     this.player.move(Phaser.Math.Clamp(dx, -1, 1), Phaser.Math.Clamp(dy, -1, 1), run, delta);
 
     // Sistemas
