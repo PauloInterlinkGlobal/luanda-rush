@@ -112,10 +112,10 @@ export class AssetManager {
 
   /** Reconstrói só o sprite do jogador (usado pela customização). */
   static rebuildPlayer(scene: Phaser.Scene, skin: CharacterSkin): void {
-    scene.textures.remove("player");
-    buildCharacterSheet(scene, "player", skin);
+    this.buildPlayer(scene, skin);
     this.registerCharacterAnims(scene, "player", true);
   }
+
 
   private static buildGroundTexture(scene: Phaser.Scene): void {
     const key = "ground";
