@@ -85,8 +85,8 @@ export function buildCharacterFromAtlas(
   });
 
   tex.refresh();
-  scene.textures.get(key).add("__base", 0, 0, 0, FRAME_W * FRAMES_PER_ROW, FRAME_H * 4);
   const t = scene.textures.get(key);
+
   for (let i = 0; i < FRAMES_PER_ROW * 4; i++) {
     const col = i % FRAMES_PER_ROW;
     const row = Math.floor(i / FRAMES_PER_ROW);
