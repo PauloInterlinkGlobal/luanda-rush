@@ -1,24 +1,39 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly } from "@tanstack/react-router";
+import { Suspense, lazy } from "react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const GameCanvas = lazy(() => import("../components/GameCanvas"));
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "LOTADOR — Chama, Lota, Ganha | Jogo arcade de Luanda" },
+      {
+        name: "description",
+        content:
+          "LOTADOR é um jogo arcade inspirado nos lotadores de táxi de Luanda: chama passageiros, enche candongueiros para Viana, Talatona e Centro e ganha Kz.",
+      },
+      { property: "og:title", content: "LOTADOR — Chama, Lota, Ganha" },
+      {
+        property: "og:description",
+        content: "Corre pela paragem, convence passageiros e lota o táxi antes dos teus rivais.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="flex min-h-screen w-full items-center justify-center bg-[#0e1a33]">
+      <h1 className="sr-only">LOTADOR — jogo arcade de lotadores de táxi em Luanda</h1>
+      <ClientOnly fallback={<p className="text-[#ffc31f]">A carregar o jogo...</p>}>
+        <Suspense fallback={<p className="text-[#ffc31f]">A carregar o jogo...</p>}>
+          <GameCanvas />
+        </Suspense>
+      </ClientOnly>
+    </main>
   );
 }
