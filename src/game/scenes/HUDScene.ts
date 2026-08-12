@@ -1,0 +1,164 @@
+import Phaser from "phaser";
+import { HEX } from "../config/GameConfig";
+import { BALANCE } from "../config/BalanceConfig";
+import { SaveManager, levelTitle } from "../systems/SaveManager";
+import type { GameScene } from "./GameScene";
+
+/** HUD por cima do jogo: dinheiro, combo, tempo, stamina, joystick e botões. */
+export class HUDScene extends Phaser.Scene {
+  private game_!: GameScene;
+  private money!: Phaser.GameObjects.Text;
+  private timer!: Phaser.GameObjects.Text;
+  private comboText!: Phaser.GameObjects.Text;
+  private levelText!: Phaser.GameObjects.Text;
+  private staminaBar!: Phaser.GameObjects.Rectangle;
+  private rushText!: Phaser.GameObjects.Text;
+  private pauseLayer!: Phaser.GameObjects.Container;
+  private stickBase!: Phaser.GameObjects.Arc;
+  private stickThumb!: Phaser.GameObjects.Arc;
+  private stickId = -1;
+
+  constructor() {
+    super("HUD");
+  }
+
+  create(): void {
+    this.game_ = this.scene.get("Game") as GameScene;
+    const { width, height } = this.scale;
+    const save = SaveManager.load();
+
+    this.add.rectangle(0, 0, width, 54, 0x0e1a33, 0.72).setOrigin(0);
+    this.money = this.text(16, 16, "0 Kz", 24, HEX.gold, 0);
+    this.timer = this.text(width / 2, 16, "3:00", 24, HEX.white, 0.5);
+    this.comboText = this.text(width - 16, 16, "COMBO x1", 20, HEX.yellow, 1);
+    this.levelText = this.text(16, 62, `NÍVEL ${save.level} · ${levelTitle(save.level)}`, 13, HEX.muted, 0);
+
+    this.add.rectangle(16, 84, 160, 10, 0x000000, 0.5).setOrigin(0, 0.5);
+    this.staminaBar = this.add.rectangle(16, 84, 160, 10, 0x36b45a).setOrigin(0, 0.5);
+
+    this.rushText = this.text(width / 2, 62, "HORA DE PONTA!", 20, HEX.red, 0.5);
+    this.rushText.setVisible(false);
+
+    this.buildTouchControls();
+    this.buildPauseLayer();
+
+    this.game_.events.on("paused", (p: boolean) => this.pauseLayer.setVisible(p));
+  }
+
+  private text(
+    x: number,
+    y: number,
+    value: string,
+    size: number,
+    color: string,
+    originX: number,
+  ): Phaser.GameObjects.Text {
+    return this.add
+      .text(x, y, value, {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: `${size}px`,
+        color,
+      })
+      .setOrigin(originX, 0)
+      .setScrollFactor(0);
+  }
+
+  private button(x: number, y: number, label: string, event: string, r = 34): void {
+    const c = this.add
+      .circle(x, y, r, 0xffc31f, 0.85)
+      .setStrokeStyle(3, 0x0e1a33)
+      .setInteractive({ useHandCursor: true });
+    this.add
+      .text(x, y, label, {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: `${Math.round(r * 0.45)}px`,
+        color: "#0e1a33",
+      })
+      .setOrigin(0.5);
+    c.on("pointerdown", () => this.events.emit(event));
+  }
+
+  private buildTouchControls(): void {
+    const { width, height } = this.scale;
+    this.stickBase = this.add.circle(110, height - 100, 62, 0xffffff, 0.14);
+    this.stickThumb = this.add.circle(110, height - 100, 28, 0xffc31f, 0.6);
+
+    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      if (p.x < width / 2 && this.stickId === -1) {
+        this.stickId = p.id;
+        this.stickBase.setPosition(p.x, p.y);
+        this.stickThumb.setPosition(p.x, p.y);
+      }
+    });
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (p.id !== this.stickId) return;
+      const dx = p.x - this.stickBase.x;
+      const dy = p.y - this.stickBase.y;
+      const len = Math.min(62, Math.hypot(dx, dy));
+      const a = Math.atan2(dy, dx);
+      this.stickThumb.setPosition(
+        this.stickBase.x + Math.cos(a) * len,
+        this.stickBase.y + Math.sin(a) * len,
+      );
+      this.registry.set("joystick", {
+        x: (Math.cos(a) * len) / 62,
+        y: (Math.sin(a) * len) / 62,
+        run: len > 52,
+      });
+    });
+    const release = (p: Phaser.Input.Pointer) => {
+      if (p.id !== this.stickId) return;
+      this.stickId = -1;
+      this.stickThumb.setPosition(this.stickBase.x, this.stickBase.y);
+      this.registry.set("joystick", { x: 0, y: 0, run: false });
+    };
+    this.input.on("pointerup", release);
+    this.input.on("pointerupoutside", release);
+
+    this.button(width - 80, height - 80, "E", "hud-interact", 40);
+    this.button(width - 168, height - 62, "!", "hud-call");
+    this.button(width - 84, height - 168, "Q", "hud-power");
+    this.button(width - 40, 84, "II", "hud-pause", 22);
+  }
+
+  private buildPauseLayer(): void {
+    const { width, height } = this.scale;
+    const bg = this.add.rectangle(0, 0, width, height, 0x0e1a33, 0.85).setOrigin(0);
+    const t = this.add
+      .text(width / 2, height / 2 - 30, "PAUSA", {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: "56px",
+        color: HEX.yellow,
+      })
+      .setOrigin(0.5);
+    const hint = this.add
+      .text(width / 2, height / 2 + 30, "toca para continuar", {
+        fontFamily: "'Trebuchet MS', sans-serif",
+        fontSize: "16px",
+        color: HEX.white,
+      })
+      .setOrigin(0.5);
+    bg.setInteractive().on("pointerdown", () => this.events.emit("hud-pause"));
+    this.pauseLayer = this.add.container(0, 0, [bg, t, hint]).setDepth(50).setVisible(false);
+  }
+
+  override update(): void {
+    const g = this.game_;
+    if (!g || !g.scene.isActive()) return;
+    this.money.setText(`${g.economy.stats.money} Kz`);
+    const s = Math.max(0, Math.ceil(g.timeLeft));
+    this.timer.setText(`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
+    this.timer.setColor(s <= 20 ? HEX.red : HEX.white);
+    this.comboText.setText(`COMBO x${g.combo.level}`);
+    this.comboText.setScale(g.combo.level > 1 ? 1.08 : 1);
+    this.staminaBar.width = 160 * (g.player.stamina / g.player.maxStamina);
+    this.staminaBar.fillColor = g.player.tired ? 0xe23b3b : 0x36b45a;
+    this.rushText.setVisible(g.isRush);
+    const ready = g.powerUps.cooldownRatio(this.time.now) >= 1;
+    this.levelText.setText(
+      `${g.difficulty.current.name} · POWER-UP ${ready ? "PRONTO" : "…"} · ${Math.round(
+        (g.timeLeft / BALANCE.matchDuration) * 100,
+      )}%`,
+    );
+  }
+}
