@@ -152,6 +152,8 @@ export class MenuScene extends Phaser.Scene {
       const toggle = (y: number, key: "music" | "sfx" | "vibration", name: string) => {
         this.button(y, `${name}: ${s[key] ? "LIGADO" : "DESLIGADO"}`, () => {
           SaveManager.update({ settings: { ...s, [key]: !s[key] } });
+          audio.musicEnabled = key === "music" ? !s.music : s.music;
+          audio.sfxEnabled = key === "sfx" ? !s.sfx : s.sfx;
           this.render();
         });
       };
