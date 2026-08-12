@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { ASSET_CONFIG, DEFAULT_CHARACTER } from "../config/AssetConfig";
+import { DEFAULT_CHARACTER } from "../config/AssetConfig";
 import { PASSENGERS } from "../data/passengers";
 import { TAXIS } from "../data/taxis";
 import { MAP_CONFIG } from "../config/MapConfig";
@@ -11,8 +11,16 @@ import {
   buildTaxiTexture,
   DIR_ROWS,
 } from "./ProceduralArt";
+import {
+  ATLAS_KEY,
+  ATLAS_URL,
+  buildCharacterFromAtlas,
+  buildSpriteFromAtlas,
+  buildTaxiFromAtlas,
+  hasFrame,
+} from "./AtlasArt";
 
-/** Skins dos NPC lotadores e do mentor. */
+/** Skins dos NPC lotadores e do mentor (fallback procedural). */
 export const NPC_SKINS: Record<string, CharacterSkin> = {
   npc_kito: { skin: 1, hair: 0, shirt: 3, pants: 1, shoes: 1, accessory: "bag" },
   npc_manuel: { skin: 3, hair: 2, shirt: 4, pants: 4, shoes: 2, accessory: "hat" },
@@ -20,22 +28,26 @@ export const NPC_SKINS: Record<string, CharacterSkin> = {
   mentor_ze: { skin: 2, hair: 4, shirt: 4, pants: 3, shoes: 2, accessory: "hat" },
 };
 
+/** Mapeamento personagem -> frames reais do atlas. */
+const ATLAS_CHARACTERS: Record<string, { down: string; up?: string; side?: string }> = {
+  npc_kito: { down: "npc_kito_down", side: "npc_kito_side" },
+  npc_manuel: { down: "npc_manuel_down" },
+  npc_debora: { down: "npc_debora_down" },
+  mentor_ze: { down: "mentor_ze_down" },
+};
+
 /**
  * AssetManager — ponto único de criação/registo de texturas e animações.
  *
- * Enquanto não existir um atlas externo, gera os sprites proceduralmente.
- * Nunca deixa uma textura em falta: `ensureTexture` cria um fallback visível.
+ * Usa os frames reais do spritesheet do jogo; se algum faltar, cai
+ * automaticamente no gerador procedural para nunca haver textura em falta.
  */
 export class AssetManager {
   private static built = new Set<string>();
 
   static preload(scene: Phaser.Scene): void {
-    if (ASSET_CONFIG.useExternalAtlas && ASSET_CONFIG.atlasImageUrl) {
-      scene.load.atlas(
-        ASSET_CONFIG.atlasKey,
-        ASSET_CONFIG.atlasImageUrl,
-        ASSET_CONFIG.atlasJsonUrl,
-      );
+    if (!scene.textures.exists(ATLAS_KEY)) {
+      scene.load.image(ATLAS_KEY, ATLAS_URL);
     }
   }
 
@@ -43,27 +55,67 @@ export class AssetManager {
   static buildAll(scene: Phaser.Scene, playerSkin: CharacterSkin = DEFAULT_CHARACTER): void {
     buildFxTextures(scene);
 
-    buildCharacterSheet(scene, "player", playerSkin);
-    Object.entries(NPC_SKINS).forEach(([key, skin]) => buildCharacterSheet(scene, key, skin));
-    Object.values(PASSENGERS).forEach((p) =>
-      buildCharacterSheet(scene, `pass_${p.type}`, p.skin),
-    );
-    Object.values(TAXIS).forEach((t) =>
-      buildTaxiTexture(scene, `taxi_${t.type}`, t.bodyColor, t.roofColor),
-    );
-    ["tree", "stall", "bin", "lamp", "bench", "sign", "cone", "wall"].forEach((k) =>
-      buildPropTexture(scene, k),
-    );
+    this.buildPlayer(scene, playerSkin);
+    Object.entries(NPC_SKINS).forEach(([key, skin]) => {
+      const atlas = ATLAS_CHARACTERS[key];
+      if (!atlas || !buildCharacterFromAtlas(scene, key, atlas)) {
+        buildCharacterSheet(scene, key, skin);
+      }
+    });
+    Object.values(PASSENGERS).forEach((p) => {
+      const key = `pass_${p.type}`;
+      if (!hasFrame(key) || !buildCharacterFromAtlas(scene, key, { down: key })) {
+        buildCharacterSheet(scene, key, p.skin);
+      }
+    });
+    Object.values(TAXIS).forEach((t) => {
+      const key = `taxi_${t.type}`;
+      if (!hasFrame(key) || !buildTaxiFromAtlas(scene, key, key)) {
+        buildTaxiTexture(scene, key, t.bodyColor, t.roofColor);
+      }
+    });
+    const PROP_SIZE: Record<string, [number, number]> = {
+      tree: [96, 120],
+      stall: [110, 90],
+      bin: [46, 56],
+      lamp: [40, 110],
+      bench: [96, 60],
+      sign: [90, 70],
+      cone: [30, 40],
+      wall: [120, 90],
+    };
+    ["tree", "stall", "bin", "lamp", "bench", "sign", "cone", "wall"].forEach((k) => {
+      const [w, h] = PROP_SIZE[k] ?? [64, 64];
+      if (!hasFrame(`prop_${k}`) || !buildSpriteFromAtlas(scene, `prop_${k}`, `prop_${k}`, w, h)) {
+        buildPropTexture(scene, k);
+      }
+    });
+    if (hasFrame("prop_tree2")) buildSpriteFromAtlas(scene, "prop_tree2", "prop_tree2", 96, 120);
+    ["fx_coin", "fx_star", "fx_spark", "fx_flame", "fx_check"].forEach((k) => {
+      if (hasFrame(k)) buildSpriteFromAtlas(scene, k, k, 48, 48);
+    });
     this.buildGroundTexture(scene);
     this.registerAnimations(scene);
   }
 
+  /** Constrói o sprite do jogador (atlas real, com fallback procedural). */
+  private static buildPlayer(scene: Phaser.Scene, skin: CharacterSkin): void {
+    const prefix = skin.female ? "player_female" : "player_male";
+    const ok = buildCharacterFromAtlas(scene, "player", {
+      down: `${prefix}_down`,
+      up: `${prefix}_up`,
+      side: `${prefix}_side`,
+    });
+    if (!ok) buildCharacterSheet(scene, "player", skin);
+  }
+
+
   /** Reconstrói só o sprite do jogador (usado pela customização). */
   static rebuildPlayer(scene: Phaser.Scene, skin: CharacterSkin): void {
-    scene.textures.remove("player");
-    buildCharacterSheet(scene, "player", skin);
+    this.buildPlayer(scene, skin);
     this.registerCharacterAnims(scene, "player", true);
   }
+
 
   private static buildGroundTexture(scene: Phaser.Scene): void {
     const key = "ground";
