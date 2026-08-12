@@ -78,7 +78,7 @@ export class MenuScene extends Phaser.Scene {
     this.layer.add([bg, text]);
   }
 
-  private label(x: number, y: number, text: string, size = 16, color = HEX.white, origin = 0.5): void {
+  private label(x: number, y: number, text: string, size = 16, color: string = HEX.white, origin = 0.5): void {
     this.layer.add(
       this.add
         .text(x, y, text, {
@@ -152,7 +152,6 @@ export class MenuScene extends Phaser.Scene {
       const toggle = (y: number, key: "music" | "sfx" | "vibration", name: string) => {
         this.button(y, `${name}: ${s[key] ? "LIGADO" : "DESLIGADO"}`, () => {
           SaveManager.update({ settings: { ...s, [key]: !s[key] } });
-          audio.setEnabled(!s[key] || s.sfx);
           this.render();
         });
       };
