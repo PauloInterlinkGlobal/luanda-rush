@@ -13,6 +13,7 @@ function defaults(): SaveData {
     money: BALANCE.startingMoney,
     upgrades: { velocidade: 0, resistencia: 0, voz: 0, persuasao: 0 },
     character: { ...DEFAULT_CHARACTER },
+    playerName: "Lotador",
     missions: {},
     bestScore: 0,
     unlockedMaps: ["bairro"],

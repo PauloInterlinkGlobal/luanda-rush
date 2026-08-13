@@ -1,12 +1,11 @@
 import Phaser from "phaser";
 import { HEX } from "../config/GameConfig";
-import { SaveManager, levelTitle, xpForLevel } from "../systems/SaveManager";
+import { SaveManager, levelTitle } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
 import { MISSIONS } from "../data/missions";
 import { MAP_CONFIG } from "../config/MapConfig";
-import { AssetManager } from "../systems/AssetManager";
 
-type Panel = "MENU" | "MISSOES" | "PERSONAGEM" | "DEFINICOES";
+type Panel = "MENU" | "MISSOES" | "DEFINICOES" | "SAIDA";
 
 /** Menu principal: jogar, missões, personagem e definições. */
 export class MenuScene extends Phaser.Scene {
@@ -103,10 +102,11 @@ export class MenuScene extends Phaser.Scene {
         16,
         HEX.gold,
       );
-      this.button(240, "JOGAR", () => this.scene.start("Game"), true);
-      this.button(310, "MISSÕES", () => this.go("MISSOES"));
-      this.button(366, "PERSONAGEM", () => this.go("PERSONAGEM"));
-      this.button(422, "DEFINIÇÕES", () => this.go("DEFINICOES"));
+      this.button(226, "JOGAR", () => this.scene.start("Game"), true);
+      this.button(292, "MISSÕES", () => this.go("MISSOES"));
+      this.button(344, "PERSONAGEM", () => this.scene.start("Character"));
+      this.button(396, "DEFINIÇÕES", () => this.go("DEFINICOES"));
+      this.button(448, "SAIR DO JOGO", () => this.go("SAIDA"));
       this.label(width / 2, height - 26, "WASD mover · SHIFT correr · E interagir · ESPAÇO chamar · Q power-up", 13, HEX.muted);
       return;
     }
@@ -125,25 +125,12 @@ export class MenuScene extends Phaser.Scene {
       });
     }
 
-    if (this.panel === "PERSONAGEM") {
-      this.label(width / 2, 180, "PERSONAGEM", 26, HEX.yellow);
-      const preview = this.add.sprite(width / 2, 300, "player").setScale(3.4);
-      if (this.anims.exists("player-idle-down")) preview.play("player-idle-down");
-      this.layer.add(preview);
-      this.label(width / 2, 380, save.character.female ? "LOTADORA" : "LOTADOR", 20, HEX.white);
-      this.button(430, save.character.female ? "MUDAR PARA MASCULINO" : "MUDAR PARA FEMININO", () => {
-        const next = { ...save.character, female: !save.character.female };
-        SaveManager.update({ character: next });
-        AssetManager.rebuildPlayer(this, next);
-        this.render();
-      });
-      this.label(
-        width / 2,
-        200,
-        `XP ${save.xp} / ${xpForLevel(save.level + 1)}`,
-        14,
-        HEX.muted,
-      );
+    if (this.panel === "SAIDA") {
+      this.label(width / 2, 200, "SAIR DO JOGO", 26, HEX.yellow);
+      this.label(width / 2, 250, `Até à próxima, ${save.playerName || "lotador"}!`, 18, HEX.white);
+      this.label(width / 2, 282, "O teu progresso fica guardado neste dispositivo.", 13, HEX.muted);
+      this.button(340, "SIM, SAIR", () => this.quitGame());
+      this.button(396, "AFINAL FICO", () => this.go("MENU"));
     }
 
     if (this.panel === "DEFINICOES") {
@@ -167,6 +154,45 @@ export class MenuScene extends Phaser.Scene {
     }
 
     this.button(height - 60, "VOLTAR", () => this.go("MENU"));
+  }
+
+  /** Fecha a sessão: pára tudo e mostra o ecrã de despedida. */
+  private quitGame(): void {
+    const { width, height } = this.scale;
+    this.children.removeAll(true);
+    this.add.rectangle(0, 0, width, height, 0x0e1a33).setOrigin(0);
+    this.add
+      .text(width / 2, height / 2 - 30, "ATÉ À PRÓXIMA, LOTADOR!", {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: "40px",
+        color: HEX.yellow,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(width / 2, height / 2 + 20, "Obrigado por jogar LOTADOR.", {
+        fontFamily: "'Trebuchet MS', sans-serif",
+        fontSize: "16px",
+        color: HEX.muted,
+      })
+      .setOrigin(0.5);
+    const bg = this.add
+      .rectangle(width / 2, height / 2 + 90, 260, 48, 0xffc31f, 0.96)
+      .setStrokeStyle(3, 0x0e1a33)
+      .setInteractive({ useHandCursor: true });
+    this.add
+      .text(width / 2, height / 2 + 90, "VOLTAR A ENTRAR", {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: "20px",
+        color: "#0e1a33",
+      })
+      .setOrigin(0.5);
+    bg.on("pointerdown", () => this.scene.restart());
+    audio.musicEnabled = false;
+    try {
+      window.close();
+    } catch {
+      /* browsers bloqueiam fechar separadores por código */
+    }
   }
 
   private go(panel: Panel): void {

@@ -11,6 +11,7 @@ import {
   buildTaxiTexture,
   DIR_ROWS,
 } from "./ProceduralArt";
+import { PALETTE } from "../config/AssetConfig";
 import {
   ATLAS_KEY,
   ATLAS_URL,
@@ -100,12 +101,27 @@ export class AssetManager {
 
   /** Constrói o sprite do jogador (atlas real, com fallback procedural). */
   private static buildPlayer(scene: Phaser.Scene, skin: CharacterSkin): void {
+    if (skin.style === "classic") {
+      buildCharacterSheet(scene, "player", skin);
+      return;
+    }
     const prefix = skin.female ? "player_female" : "player_male";
-    const ok = buildCharacterFromAtlas(scene, "player", {
-      down: `${prefix}_down`,
-      up: `${prefix}_up`,
-      side: `${prefix}_side`,
-    });
+    const pick = (list: number[], i: number) => list[i % list.length] ?? list[0]!;
+    const recolor = skin.useCustomColors
+      ? {
+          shirt: pick(PALETTE.shirts, skin.shirt),
+          pants: pick(PALETTE.pants, skin.pants),
+          shoes: pick(PALETTE.shoes, skin.shoes),
+          accessory: skin.accessory ?? "none",
+          accessoryColor: pick(PALETTE.shirts, skin.shirt + 2),
+        }
+      : undefined;
+    const ok = buildCharacterFromAtlas(
+      scene,
+      "player",
+      { down: `${prefix}_down`, up: `${prefix}_up`, side: `${prefix}_side` },
+      recolor,
+    );
     if (!ok) buildCharacterSheet(scene, "player", skin);
   }
 

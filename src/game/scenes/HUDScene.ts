@@ -13,7 +13,7 @@ export class HUDScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private staminaBar!: Phaser.GameObjects.Rectangle;
   private rushText!: Phaser.GameObjects.Text;
-  private pauseLayer!: Phaser.GameObjects.Container;
+  private isPaused = false;
   private stickBase!: Phaser.GameObjects.Arc;
   private stickThumb!: Phaser.GameObjects.Arc;
   private stickId = -1;
@@ -40,9 +40,16 @@ export class HUDScene extends Phaser.Scene {
     this.rushText.setVisible(false);
 
     this.buildTouchControls();
-    this.buildPauseLayer();
 
-    this.game_.events.on("paused", (p: boolean) => this.pauseLayer.setVisible(p));
+    this.game_.events.on("paused", (p: boolean) => {
+      this.isPaused = p;
+      if (p) this.scene.launch("Pause");
+      else this.scene.stop("Pause");
+    });
+
+    this.input.keyboard?.on("keydown-ESC", () => {
+      if (!this.isPaused) this.events.emit("hud-pause");
+    });
   }
 
   private text(
@@ -119,27 +126,6 @@ export class HUDScene extends Phaser.Scene {
     this.button(width - 168, height - 62, "!", "hud-call");
     this.button(width - 84, height - 168, "Q", "hud-power");
     this.button(width - 40, 84, "II", "hud-pause", 22);
-  }
-
-  private buildPauseLayer(): void {
-    const { width, height } = this.scale;
-    const bg = this.add.rectangle(0, 0, width, height, 0x0e1a33, 0.85).setOrigin(0);
-    const t = this.add
-      .text(width / 2, height / 2 - 30, "PAUSA", {
-        fontFamily: "Impact, 'Arial Black', sans-serif",
-        fontSize: "56px",
-        color: HEX.yellow,
-      })
-      .setOrigin(0.5);
-    const hint = this.add
-      .text(width / 2, height / 2 + 30, "toca para continuar", {
-        fontFamily: "'Trebuchet MS', sans-serif",
-        fontSize: "16px",
-        color: HEX.white,
-      })
-      .setOrigin(0.5);
-    bg.setInteractive().on("pointerdown", () => this.events.emit("hud-pause"));
-    this.pauseLayer = this.add.container(0, 0, [bg, t, hint]).setDepth(50).setVisible(false);
   }
 
   override update(): void {
