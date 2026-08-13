@@ -69,7 +69,10 @@ export class CharacterScene extends Phaser.Scene {
 
   /** Reconstrói a textura do jogador com a aparência actual. */
   private rebuild(): void {
+    this.preview.anims.stop();
+    this.preview.setTexture("__MISSING");
     AssetManager.rebuildPlayer(this, this.skin);
+    this.preview.setTexture("player", 0);
     this.playPreview();
   }
 
@@ -166,7 +169,7 @@ export class CharacterScene extends Phaser.Scene {
     this.text(250, 130, this.playerName.toUpperCase(), 24, HEX.gold);
     this.button(
       250,
-      480,
+      508,
       "MUDAR NOME",
       () => {
         const name = window.prompt("Nome do lotador:", this.playerName);
@@ -205,8 +208,8 @@ export class CharacterScene extends Phaser.Scene {
     });
 
     // Opções
-    let y = 214;
-    const gap = 40;
+    let y = 198;
+    const gap = 34;
     this.row(y, "DIRECÇÃO", DIR_LABEL[DIRS[this.dirIndex] ?? "down"] ?? "", (d) => {
       this.dirIndex = (this.dirIndex + d + DIRS.length) % DIRS.length;
       this.playPreview();
@@ -247,16 +250,20 @@ export class CharacterScene extends Phaser.Scene {
       this.render();
     });
 
-    if (!classic) {
-      this.text(610, height - 96, "Estilo REAL usa os sprites do jogo com as tuas cores.", 12, HEX.muted);
-    }
+    this.text(
+      250,
+      455,
+      classic ? "Estilo CLÁSSICO: cores todas livres." : "Estilo REAL: sprites do jogo com as tuas cores.",
+      12,
+      HEX.muted,
+    );
 
-    this.button(480, height - 52, "PREDEFINIÇÃO", () => {
+    this.button(480, height - 32, "PREDEFINIÇÃO", () => {
       this.skin = { ...DEFAULT_CHARACTER };
       this.rebuild();
       this.render();
     }, 190);
-    this.button(700, height - 52, "GUARDAR E VOLTAR", () => this.exit(true), 230, true);
+    this.button(740, height - 32, "GUARDAR E VOLTAR", () => this.exit(true), 230, true);
     this.button(width - 70, 34, "VOLTAR", () => this.exit(), 110);
   }
 
