@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { FRAME_H, FRAME_W, FRAMES_PER_ROW, TAXI_H, TAXI_W } from "./ProceduralArt";
+import { FRAME_H, FRAME_W, FRAMES_PER_ROW, TAXI_H, TAXI_W, css } from "./ProceduralArt";
 import FRAMES from "../data/atlas-frames.json";
 import ATLAS_ASSET from "../../assets/lotador_sprites.png.asset.json";
 
@@ -9,6 +9,15 @@ export const ATLAS_URL = ATLAS_ASSET.url;
 type Rect = { x: number; y: number; w: number; h: number };
 const RECTS = FRAMES as Record<string, Rect>;
 
+/** Opções de personalização aplicadas por cima do frame real. */
+export interface RecolorOptions {
+  shirt?: number;
+  pants?: number;
+  shoes?: number;
+  accessory?: "cap" | "hat" | "bag" | "none";
+  accessoryColor?: number;
+}
+
 export function hasFrame(name: string): boolean {
   return Boolean(RECTS[name]);
 }
@@ -17,6 +26,82 @@ function source(scene: Phaser.Scene): HTMLImageElement | HTMLCanvasElement | nul
   if (!scene.textures.exists(ATLAS_KEY)) return null;
   const img = scene.textures.get(ATLAS_KEY).getSourceImage();
   return img as HTMLImageElement;
+}
+
+function hasRecolor(o?: RecolorOptions): boolean {
+  if (!o) return false;
+  return (
+    o.shirt !== undefined ||
+    o.pants !== undefined ||
+    o.shoes !== undefined ||
+    (o.accessory !== undefined && o.accessory !== "none")
+  );
+}
+
+/**
+ * Recolore um recorte já desenhado: aplica a cor (matiz + saturação) em
+ * faixas verticais — tronco, pernas e pés — preservando o sombreado do sprite.
+ */
+function paintBands(
+  ctx: CanvasRenderingContext2D,
+  img: CanvasImageSource,
+  rect: Rect,
+  w: number,
+  h: number,
+  o: RecolorOptions,
+): void {
+  const bands: [number, number, number | undefined][] = [
+    [0.3, 0.62, o.shirt],
+    [0.62, 0.84, o.pants],
+    [0.84, 1.0, o.shoes],
+  ];
+  bands.forEach(([a, b, color]) => {
+    if (color === undefined) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, h * a, w, h * (b - a));
+    ctx.clip();
+    ctx.globalCompositeOperation = "color";
+    ctx.fillStyle = css(color);
+    ctx.fillRect(0, h * a, w, h * (b - a));
+    ctx.restore();
+  });
+  // Repõe o alpha original (o preenchimento pode ter transbordado).
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, w, h);
+  ctx.restore();
+}
+
+/** Desenha o acessório escolhido por cima da cabeça do sprite. */
+function paintAccessory(ctx: CanvasRenderingContext2D, w: number, h: number, o: RecolorOptions): void {
+  const type = o.accessory;
+  if (!type || type === "none") return;
+  const color = css(o.accessoryColor ?? 0xe23b3b);
+  const cx = w / 2;
+  const headY = h * 0.16;
+  ctx.save();
+  ctx.fillStyle = color;
+  if (type === "cap") {
+    ctx.beginPath();
+    ctx.ellipse(cx, headY, w * 0.19, h * 0.055, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillRect(cx - w * 0.05, headY, w * 0.28, h * 0.022);
+  } else if (type === "hat") {
+    ctx.fillRect(cx - w * 0.3, headY, w * 0.6, h * 0.022);
+    ctx.beginPath();
+    ctx.ellipse(cx, headY - h * 0.01, w * 0.16, h * 0.06, 0, Math.PI, 0);
+    ctx.fill();
+  } else if (type === "bag") {
+    ctx.fillRect(cx + w * 0.12, h * 0.42, w * 0.16, h * 0.18);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, w * 0.03);
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.06, h * 0.34);
+    ctx.lineTo(cx + w * 0.18, h * 0.44);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Desenha um frame do atlas dentro de uma célula, alinhado ao chão. */
@@ -30,6 +115,7 @@ function drawFrame(
   maxH: number,
   flip: boolean,
   bob: number,
+  recolor?: RecolorOptions,
 ): void {
   const scale = Math.min(maxW / rect.w, maxH / rect.h);
   const w = rect.w * scale;
@@ -40,6 +126,22 @@ function drawFrame(
   if (flip) {
     ctx.translate(cx * 2, 0);
     ctx.scale(-1, 1);
+  }
+  if (hasRecolor(recolor)) {
+    const cw = Math.max(1, Math.ceil(w));
+    const ch = Math.max(1, Math.ceil(h));
+    const tmp = document.createElement("canvas");
+    tmp.width = cw;
+    tmp.height = ch;
+    const tctx = tmp.getContext("2d");
+    if (tctx) {
+      tctx.drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, cw, ch);
+      paintBands(tctx, img, rect, cw, ch, recolor!);
+      paintAccessory(tctx, cw, ch, recolor!);
+      ctx.drawImage(tmp, x, y, w, h);
+      ctx.restore();
+      return;
+    }
   }
   ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h, x, y, w, h);
   ctx.restore();
@@ -54,6 +156,7 @@ export function buildCharacterFromAtlas(
   scene: Phaser.Scene,
   key: string,
   frames: { down: string; up?: string; side?: string },
+  recolor?: RecolorOptions,
 ): boolean {
   const img = source(scene);
   const down = RECTS[frames.down];
@@ -80,7 +183,7 @@ export function buildCharacterFromAtlas(
     for (let f = 0; f < FRAMES_PER_ROW; f++) {
       const cx = f * FRAME_W + FRAME_W / 2;
       const bottom = row * FRAME_H + FRAME_H - 2;
-      drawFrame(ctx, img, rect, cx, bottom, FRAME_W - 4, FRAME_H - 6, flip, bobs[f] ?? 0);
+      drawFrame(ctx, img, rect, cx, bottom, FRAME_W - 4, FRAME_H - 6, flip, bobs[f] ?? 0, recolor);
     }
   });
 
