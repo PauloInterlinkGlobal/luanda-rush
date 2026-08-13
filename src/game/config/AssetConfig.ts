@@ -32,6 +32,8 @@ export const DEFAULT_CHARACTER: CharacterSkin = {
   shoes: 0,
   accessory: "cap",
   female: false,
+  style: "atlas",
+  useCustomColors: false,
 };
 
 /**

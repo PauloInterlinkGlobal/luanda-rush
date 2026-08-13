@@ -100,6 +100,10 @@ export interface CharacterSkin {
   shoes: number;
   accessory?: "cap" | "hat" | "bag" | "none";
   female?: boolean;
+  /** "atlas" usa os sprites reais; "classic" usa o gerador procedural. */
+  style?: "atlas" | "classic";
+  /** Quando verdadeiro, as cores escolhidas são aplicadas ao sprite real. */
+  useCustomColors?: boolean;
 }
 
 export interface UpgradeDefinition {
@@ -139,6 +143,7 @@ export interface SaveData {
   money: number;
   upgrades: Record<UpgradeDefinition["id"], number>;
   character: CharacterSkin;
+  playerName: string;
   missions: Record<string, boolean>;
   bestScore: number;
   unlockedMaps: string[];
