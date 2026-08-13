@@ -1,10 +1,9 @@
 import Phaser from "phaser";
 import { HEX } from "../config/GameConfig";
-import { SaveManager, levelTitle, xpForLevel } from "../systems/SaveManager";
+import { SaveManager, levelTitle } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
 import { MISSIONS } from "../data/missions";
 import { MAP_CONFIG } from "../config/MapConfig";
-import { AssetManager } from "../systems/AssetManager";
 
 type Panel = "MENU" | "MISSOES" | "DEFINICOES" | "SAIDA";
 
@@ -160,8 +159,7 @@ export class MenuScene extends Phaser.Scene {
   /** Fecha a sessão: pára tudo e mostra o ecrã de despedida. */
   private quitGame(): void {
     const { width, height } = this.scale;
-    this.layer.removeAll(true);
-    this.children.each((c) => c.setVisible?.(false));
+    this.children.removeAll(true);
     this.add.rectangle(0, 0, width, height, 0x0e1a33).setOrigin(0);
     this.add
       .text(width / 2, height / 2 - 30, "ATÉ À PRÓXIMA, LOTADOR!", {
