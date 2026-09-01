@@ -244,3 +244,42 @@ export function buildSpriteFromAtlas(
   tex.refresh();
   return true;
 }
+
+/** Constrói a spritesheet do jogador a partir do sheet real limpo (6x4). */
+export function buildPlayerFromSheet(
+  scene: Phaser.Scene,
+  key: string,
+  recolor?: RecolorOptions,
+): boolean {
+  if (!scene.textures.exists(PLAYER_SHEET_KEY)) return false;
+  const img = scene.textures.get(PLAYER_SHEET_KEY).getSourceImage() as CanvasImageSource;
+  // linhas na ordem DIR_ROWS: down(front), left, right, up(back)
+  const rows = ["front", "left", "right", "back"];
+  // colunas -> idle, walk x4, interact
+  const cols = ["idle_0", "run_0", "run_1", "run_2", "run_3", "idle_1"];
+
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const tex = scene.textures.createCanvas(key, FRAME_W * FRAMES_PER_ROW, FRAME_H * 4);
+  if (!tex) return false;
+  const ctx = tex.getContext();
+  ctx.imageSmoothingEnabled = true;
+
+  rows.forEach((dir, row) => {
+    cols.forEach((state, f) => {
+      const rect = PLAYER_RECTS[`${dir}_${state}`];
+      if (!rect) return;
+      const cx = f * FRAME_W + FRAME_W / 2;
+      const bottom = row * FRAME_H + FRAME_H - 2;
+      drawFrame(ctx, img, rect, cx, bottom, FRAME_W - 2, FRAME_H - 4, false, 0, recolor);
+    });
+  });
+
+  tex.refresh();
+  const t = scene.textures.get(key);
+  for (let i = 0; i < FRAMES_PER_ROW * 4; i++) {
+    const col = i % FRAMES_PER_ROW;
+    const row = Math.floor(i / FRAMES_PER_ROW);
+    t.add(i, 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+  }
+  return true;
+}
