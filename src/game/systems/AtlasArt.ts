@@ -1,13 +1,18 @@
 import Phaser from "phaser";
 import { FRAME_H, FRAME_W, FRAMES_PER_ROW, TAXI_H, TAXI_W, css } from "./ProceduralArt";
 import FRAMES from "../data/atlas-frames.json";
+import PLAYER_SHEET from "../data/player-frames.json";
 import ATLAS_ASSET from "../../assets/lotador_sprites.png.asset.json";
+import PLAYER_ASSET from "../../assets/player_sheet.png.asset.json";
 
 export const ATLAS_KEY = "lotador_sprites";
 export const ATLAS_URL = ATLAS_ASSET.url;
+export const PLAYER_SHEET_KEY = "player_sheet";
+export const PLAYER_SHEET_URL = PLAYER_ASSET.url;
 
 type Rect = { x: number; y: number; w: number; h: number };
 const RECTS = FRAMES as Record<string, Rect>;
+const PLAYER_RECTS = PLAYER_SHEET.frames as Record<string, Rect>;
 
 /** Opções de personalização aplicadas por cima do frame real. */
 export interface RecolorOptions {
