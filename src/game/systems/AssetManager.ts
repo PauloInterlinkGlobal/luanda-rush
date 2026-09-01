@@ -15,7 +15,10 @@ import { PALETTE } from "../config/AssetConfig";
 import {
   ATLAS_KEY,
   ATLAS_URL,
+  PLAYER_SHEET_KEY,
+  PLAYER_SHEET_URL,
   buildCharacterFromAtlas,
+  buildPlayerFromSheet,
   buildSpriteFromAtlas,
   buildTaxiFromAtlas,
   hasFrame,
