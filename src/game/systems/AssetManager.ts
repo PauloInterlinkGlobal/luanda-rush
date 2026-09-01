@@ -53,6 +53,9 @@ export class AssetManager {
     if (!scene.textures.exists(ATLAS_KEY)) {
       scene.load.image(ATLAS_KEY, ATLAS_URL);
     }
+    if (!scene.textures.exists(PLAYER_SHEET_KEY)) {
+      scene.load.image(PLAYER_SHEET_KEY, PLAYER_SHEET_URL);
+    }
   }
 
   /** Cria todas as texturas do jogo. Idempotente. */
