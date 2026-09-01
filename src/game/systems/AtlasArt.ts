@@ -1,13 +1,18 @@
 import Phaser from "phaser";
 import { FRAME_H, FRAME_W, FRAMES_PER_ROW, TAXI_H, TAXI_W, css } from "./ProceduralArt";
 import FRAMES from "../data/atlas-frames.json";
+import PLAYER_SHEET from "../data/player-frames.json";
 import ATLAS_ASSET from "../../assets/lotador_sprites.png.asset.json";
+import PLAYER_ASSET from "../../assets/player_sheet.png.asset.json";
 
 export const ATLAS_KEY = "lotador_sprites";
 export const ATLAS_URL = ATLAS_ASSET.url;
+export const PLAYER_SHEET_KEY = "player_sheet";
+export const PLAYER_SHEET_URL = PLAYER_ASSET.url;
 
 type Rect = { x: number; y: number; w: number; h: number };
 const RECTS = FRAMES as Record<string, Rect>;
+const PLAYER_RECTS = PLAYER_SHEET.frames as Record<string, Rect>;
 
 /** Opções de personalização aplicadas por cima do frame real. */
 export interface RecolorOptions {
@@ -237,5 +242,44 @@ export function buildSpriteFromAtlas(
   if (!tex) return false;
   tex.getContext().drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, w, h);
   tex.refresh();
+  return true;
+}
+
+/** Constrói a spritesheet do jogador a partir do sheet real limpo (6x4). */
+export function buildPlayerFromSheet(
+  scene: Phaser.Scene,
+  key: string,
+  recolor?: RecolorOptions,
+): boolean {
+  if (!scene.textures.exists(PLAYER_SHEET_KEY)) return false;
+  const img = scene.textures.get(PLAYER_SHEET_KEY).getSourceImage() as CanvasImageSource;
+  // linhas na ordem DIR_ROWS: down(front), left, right, up(back)
+  const rows = ["front", "left", "right", "back"];
+  // colunas -> idle, walk x4, interact
+  const cols = ["idle_0", "run_0", "run_1", "run_2", "run_3", "idle_1"];
+
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const tex = scene.textures.createCanvas(key, FRAME_W * FRAMES_PER_ROW, FRAME_H * 4);
+  if (!tex) return false;
+  const ctx = tex.getContext();
+  ctx.imageSmoothingEnabled = true;
+
+  rows.forEach((dir, row) => {
+    cols.forEach((state, f) => {
+      const rect = PLAYER_RECTS[`${dir}_${state}`];
+      if (!rect) return;
+      const cx = f * FRAME_W + FRAME_W / 2;
+      const bottom = row * FRAME_H + FRAME_H - 2;
+      drawFrame(ctx, img, rect, cx, bottom, FRAME_W - 2, FRAME_H - 4, false, 0, recolor);
+    });
+  });
+
+  tex.refresh();
+  const t = scene.textures.get(key);
+  for (let i = 0; i < FRAMES_PER_ROW * 4; i++) {
+    const col = i % FRAMES_PER_ROW;
+    const row = Math.floor(i / FRAMES_PER_ROW);
+    t.add(i, 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+  }
   return true;
 }

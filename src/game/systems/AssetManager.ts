@@ -15,7 +15,10 @@ import { PALETTE } from "../config/AssetConfig";
 import {
   ATLAS_KEY,
   ATLAS_URL,
+  PLAYER_SHEET_KEY,
+  PLAYER_SHEET_URL,
   buildCharacterFromAtlas,
+  buildPlayerFromSheet,
   buildSpriteFromAtlas,
   buildTaxiFromAtlas,
   hasFrame,
@@ -49,6 +52,9 @@ export class AssetManager {
   static preload(scene: Phaser.Scene): void {
     if (!scene.textures.exists(ATLAS_KEY)) {
       scene.load.image(ATLAS_KEY, ATLAS_URL);
+    }
+    if (!scene.textures.exists(PLAYER_SHEET_KEY)) {
+      scene.load.image(PLAYER_SHEET_KEY, PLAYER_SHEET_URL);
     }
   }
 
@@ -116,6 +122,8 @@ export class AssetManager {
           accessoryColor: pick(PALETTE.shirts, skin.shirt + 2),
         }
       : undefined;
+    // Sprite real do lotador (sheet limpo 6x4) — usado para o personagem masculino.
+    if (!skin.female && buildPlayerFromSheet(scene, "player", recolor)) return;
     const ok = buildCharacterFromAtlas(
       scene,
       "player",
