@@ -122,6 +122,8 @@ export class AssetManager {
           accessoryColor: pick(PALETTE.shirts, skin.shirt + 2),
         }
       : undefined;
+    // Sprite real do lotador (sheet limpo 6x4) — usado para o personagem masculino.
+    if (!skin.female && buildPlayerFromSheet(scene, "player", recolor)) return;
     const ok = buildCharacterFromAtlas(
       scene,
       "player",
