@@ -23,6 +23,8 @@ import {
   buildTaxiFromAtlas,
   hasFrame,
 } from "./AtlasArt";
+import { hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
+
 
 /** Skins dos NPC lotadores e do mentor (fallback procedural). */
 export const NPC_SKINS: Record<string, CharacterSkin> = {
@@ -56,7 +58,9 @@ export class AssetManager {
     if (!scene.textures.exists(PLAYER_SHEET_KEY)) {
       scene.load.image(PLAYER_SHEET_KEY, PLAYER_SHEET_URL);
     }
+    preloadTaxiSheets(scene);
   }
+
 
   /** Cria todas as texturas do jogo. Idempotente. */
   static buildAll(scene: Phaser.Scene, playerSkin: CharacterSkin = DEFAULT_CHARACTER): void {
@@ -77,10 +81,13 @@ export class AssetManager {
     });
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
+      // Folha real da Hiace (renderizada do modelo 3D) tem prioridade.
+      if (hasTaxiSheet(scene, key)) return;
       if (!hasFrame(key) || !buildTaxiFromAtlas(scene, key, key)) {
         buildTaxiTexture(scene, key, t.bodyColor, t.roofColor);
       }
     });
+
     const PROP_SIZE: Record<string, [number, number]> = {
       tree: [96, 120],
       stall: [110, 90],
