@@ -35,5 +35,5 @@ export function preloadTaxiSheets(scene: Phaser.Scene): void {
 export function hasTaxiSheet(scene: Phaser.Scene, key: string): boolean {
   if (!scene.textures.exists(key)) return false;
   const tex = scene.textures.get(key);
-  return tex.has(0) && tex.has(1);
+  return tex.has("0") && tex.has("1");
 }
