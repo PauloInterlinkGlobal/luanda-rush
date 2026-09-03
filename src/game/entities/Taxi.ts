@@ -46,8 +46,9 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(120, 40);
-    body.setOffset(6, 26);
+    body.setSize(128, 44);
+    body.setOffset(10, 32);
+
     body.setImmovable(true);
     this.setDepth(slot.y);
     const rollAnimation = `taxi_${type}-roll`;
@@ -91,7 +92,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
         color: HEX.white,
       })
       .setOrigin(0.5);
-    const c = scene.add.container(this.x, this.y - 58, [bg, text]);
+    const c = scene.add.container(this.x, this.y - 74, [bg, text]);
     c.setDepth(100001);
     return c;
   }
@@ -104,8 +105,9 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
   }
 
   get boardPoint(): Phaser.Math.Vector2 {
-    return new Phaser.Math.Vector2(this.x - 30, this.y + 34);
+    return new Phaser.Math.Vector2(this.x - 34, this.y + 40);
   }
+
 
   /** Adiciona um passageiro. Devolve true se o táxi ficou cheio. */
   addPassenger(): boolean {
@@ -178,10 +180,10 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
         break;
     }
 
-    this.label.setPosition(this.x, this.y - 58);
-    this.countText.setPosition(this.x, this.y - 34);
+    this.label.setPosition(this.x, this.y - 74);
+    this.countText.setPosition(this.x, this.y - 52);
     this.countText.setText(`${this.currentPassengers} / ${this.capacity}`);
-    this.timerBar.setPosition(this.x - 45, this.y - 20);
+    this.timerBar.setPosition(this.x - 45, this.y - 36);
     const ratio = Phaser.Math.Clamp(this.waitLeft / this.def.waitTime, 0, 1);
     this.timerBar.width = 90 * ratio;
     this.timerBar.fillColor = ratio > 0.5 ? 0x36b45a : ratio > 0.25 ? 0xffc31f : 0xe23b3b;
