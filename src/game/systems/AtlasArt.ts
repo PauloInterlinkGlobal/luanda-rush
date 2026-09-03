@@ -2,14 +2,11 @@ import Phaser from "phaser";
 import { FRAME_H, FRAME_W, FRAMES_PER_ROW, TAXI_H, TAXI_W, css } from "./ProceduralArt";
 import FRAMES from "../data/atlas-frames.json";
 import PLAYER_SHEET from "../data/player-frames.json";
-import atlasUrl from "../../assets/lotador_atlas_clean.png";
-import playerSheetUrl from "../../assets/player_sheet.png";
-
 export const ATLAS_KEY = "lotador_sprites";
-// Imports pelo bundler geram URLs com hash, válidas em dev, produção e Capacitor.
-export const ATLAS_URL = atlasUrl;
+// Assets públicos e same-origin evitam imports dinâmicos de PNG pelo Vite.
+export const ATLAS_URL = "/lotador_atlas_clean.png";
 export const PLAYER_SHEET_KEY = "player_sheet";
-export const PLAYER_SHEET_URL = playerSheetUrl;
+export const PLAYER_SHEET_URL = "/player_sheet.png";
 
 type Rect = { x: number; y: number; w: number; h: number };
 const RECTS = FRAMES as Record<string, Rect>;
