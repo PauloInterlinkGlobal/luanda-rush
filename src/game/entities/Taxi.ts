@@ -50,7 +50,8 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
     body.setOffset(6, 26);
     body.setImmovable(true);
     this.setDepth(slot.y);
-    this.play(`taxi_${type}-roll`, true);
+    const rollAnimation = `taxi_${type}-roll`;
+    if (scene.anims.exists(rollAnimation)) this.play(rollAnimation, true);
 
     this.label = this.createLabel(scene);
     this.countText = scene.add
@@ -162,7 +163,8 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
         break;
       }
       case TaxiState.DEPARTING: {
-        this.play(`taxi_${this.def.type}-roll`, true);
+        const rollAnimation = `taxi_${this.def.type}-roll`;
+        if (this.scene.anims.exists(rollAnimation)) this.play(rollAnimation, true);
         this.setVelocityX(this.body ? Math.min(420, (this.body.velocity.x || 60) + 500 * dt) : 300);
         this.dust?.setPosition(this.x - 60, this.y + 26);
         if (this.x > MAP_CONFIG.width + 200) {

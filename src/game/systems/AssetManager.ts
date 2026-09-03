@@ -204,10 +204,14 @@ export class AssetManager {
     );
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
-      if (!scene.anims.exists(`${key}-roll`)) {
+      const texture = scene.textures.get(key);
+      const frames = [0, 1].filter((frame) => texture.has(frame));
+      if (frames.length > 0 && !scene.anims.exists(`${key}-roll`)) {
         scene.anims.create({
           key: `${key}-roll`,
-          frames: scene.anims.generateFrameNumbers(key, { start: 0, end: 1 }),
+          // As texturas dos táxis são CanvasTextures com frames adicionados
+          // manualmente; valide-os antes de criar uma animação jogável.
+          frames: frames.map((frame) => ({ key, frame })),
           frameRate: 12,
           repeat: -1,
         });
