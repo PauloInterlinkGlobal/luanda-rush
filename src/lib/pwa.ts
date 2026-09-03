@@ -12,6 +12,19 @@ export async function registerPwa(): Promise<void> {
   if (!allowed) {
     const registrations = await navigator.serviceWorker.getRegistrations();
     await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    // Um Service Worker antigo continua a controlar a página atual até a
+    // próxima navegação. No preview isso pode servir módulos Vite obsoletos
+    // (por exemplo, Passenger.ts) e quebrar imports dinâmicos.
+    if (navigator.serviceWorker.controller) {
+      const reloadKey = "lotador-sw-clean-reload";
+      if (sessionStorage.getItem(reloadKey) !== "1") {
+        sessionStorage.setItem(reloadKey, "1");
+        window.location.reload();
+        return;
+      }
+      sessionStorage.removeItem(reloadKey);
+    }
     return;
   }
   await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
