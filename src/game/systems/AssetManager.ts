@@ -133,13 +133,11 @@ export class AssetManager {
     if (!ok) buildCharacterSheet(scene, "player", skin);
   }
 
-
   /** Reconstrói só o sprite do jogador (usado pela customização). */
   static rebuildPlayer(scene: Phaser.Scene, skin: CharacterSkin): void {
     this.buildPlayer(scene, skin);
     this.registerCharacterAnims(scene, "player", true);
   }
-
 
   private static buildGroundTexture(scene: Phaser.Scene): void {
     const key = "ground";
@@ -204,10 +202,14 @@ export class AssetManager {
     );
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
-      if (!scene.anims.exists(`${key}-roll`)) {
+      const texture = scene.textures.get(key);
+      const frames = [0, 1].filter((frame) => texture.has(frame));
+      if (frames.length > 0 && !scene.anims.exists(`${key}-roll`)) {
         scene.anims.create({
           key: `${key}-roll`,
-          frames: scene.anims.generateFrameNumbers(key, { start: 0, end: 1 }),
+          // As texturas dos táxis são CanvasTextures com frames adicionados
+          // manualmente; valide-os antes de criar uma animação jogável.
+          frames: frames.map((frame) => ({ key, frame })),
           frameRate: 12,
           repeat: -1,
         });
@@ -234,11 +236,14 @@ export class AssetManager {
         [`${key}-interact-${dir}`, [base + 5, base], 6, 0],
         [`${key}-celebrate-${dir}`, [base + 5, base], 8, 2],
       ];
+      const texture = scene.textures.get(key);
       defs.forEach(([animKey, frames, rate, repeat]) => {
+        const validFrames = frames.filter((frame) => texture.has(frame));
+        if (validFrames.length === 0) return;
         if (scene.anims.exists(animKey)) scene.anims.remove(animKey);
         scene.anims.create({
           key: animKey,
-          frames: frames.map((f) => ({ key, frame: f })),
+          frames: validFrames.map((frame) => ({ key, frame })),
           frameRate: rate,
           repeat,
         });
