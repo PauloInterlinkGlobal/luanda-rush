@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type Phaser from "phaser";
+import { preloadGameAssets, registerPwa } from "../lib/pwa";
 
 /** Monta o jogo Phaser (browser-only). */
 export default function GameCanvas() {
@@ -8,15 +9,16 @@ export default function GameCanvas() {
 
   useEffect(() => {
     let cancelled = false;
-    if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    }
     const el = ref.current;
     if (!el) return;
-    void import("../game").then(({ createGame }) => {
-      if (cancelled) return;
-      gameRef.current = createGame(el);
-    });
+
+    void registerPwa().catch(() => undefined);
+    void preloadGameAssets()
+      .then(() => import("../game"))
+      .then(({ createGame }) => {
+        if (cancelled) return;
+        gameRef.current = createGame(el);
+      });
     return () => {
       cancelled = true;
       gameRef.current?.destroy(true);
