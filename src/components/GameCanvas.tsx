@@ -8,6 +8,9 @@ export default function GameCanvas() {
 
   useEffect(() => {
     let cancelled = false;
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
     const el = ref.current;
     if (!el) return;
     void import("../game").then(({ createGame }) => {
