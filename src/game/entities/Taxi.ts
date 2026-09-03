@@ -46,8 +46,9 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(120, 40);
-    body.setOffset(6, 26);
+    body.setSize(128, 44);
+    body.setOffset(10, 32);
+
     body.setImmovable(true);
     this.setDepth(slot.y);
     const rollAnimation = `taxi_${type}-roll`;
@@ -104,8 +105,9 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
   }
 
   get boardPoint(): Phaser.Math.Vector2 {
-    return new Phaser.Math.Vector2(this.x - 30, this.y + 34);
+    return new Phaser.Math.Vector2(this.x - 34, this.y + 40);
   }
+
 
   /** Adiciona um passageiro. Devolve true se o táxi ficou cheio. */
   addPassenger(): boolean {
