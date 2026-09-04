@@ -28,17 +28,53 @@ async function renderHiace(): Promise<HTMLCanvasElement> {
   context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   context.imageSmoothingEnabled = true;
 
-  // A imagem fornecida é a vista lateral definitiva do jogo. Mantemos a
-  // proporção e o fundo transparente, sem perspectiva ou renderização 3D.
-  const scale = Math.min(
-    (CANVAS_WIDTH - 8) / image.naturalWidth,
-    (CANVAS_HEIGHT - 8) / image.naturalHeight,
-  );
-  const width = image.naturalWidth * scale;
-  const height = image.naturalHeight * scale;
+  // O sprite final é sempre a vista lateral azul da referência do jogo.
+  // Recortamos o espaço transparente original antes de redimensionar para
+  // impedir que a van apareça pequena dentro de uma moldura invisível.
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = image.naturalWidth;
+  sourceCanvas.height = image.naturalHeight;
+  const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  if (!sourceContext) throw new Error("Não foi possível preparar o sprite do táxi Hiace");
+  sourceContext.drawImage(image, 0, 0);
+  const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
+  let minX = sourceCanvas.width;
+  let minY = sourceCanvas.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < sourceCanvas.height; y++) {
+    for (let x = 0; x < sourceCanvas.width; x++) {
+      if (pixels[(y * sourceCanvas.width + x) * 4 + 3] > 8) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  const sourceX = maxX >= 0 ? minX : 0;
+  const sourceY = maxY >= 0 ? minY : 0;
+  const sourceWidth = maxX >= 0 ? maxX - minX + 1 : image.naturalWidth;
+  const sourceHeight = maxY >= 0 ? maxY - minY + 1 : image.naturalHeight;
+  const targetWidth = 190;
+  const targetHeight = 78;
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
   const x = (CANVAS_WIDTH - width) / 2;
   const y = (CANVAS_HEIGHT - height) / 2;
-  context.drawImage(image, x, y, width, height);
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    x,
+    y,
+    width,
+    height,
+  );
 
   return canvas;
 }
