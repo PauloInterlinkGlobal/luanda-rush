@@ -1,0 +1,14 @@
+services:
+  web:
+    image: oven/bun:1.2-debian
+    working_dir: /app
+    command: sh -c "bun install && bun run dev"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - BASE44_PUBLIC_HOST_SUFFIX=${BASE44_PUBLIC_HOST_SUFFIX:-preview.example}
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    ports:
+      - "3000:8080"
