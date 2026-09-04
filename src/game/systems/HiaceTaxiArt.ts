@@ -90,7 +90,11 @@ export async function registerHiaceTaxiTexture(scene: Phaser.Scene): Promise<voi
 export async function registerHiaceTaxiAliases(scene: Phaser.Scene, keys: string[]): Promise<void> {
   renderPromise ??= renderHiace();
   const canvas = await renderPromise;
+  const dataUrl = canvas.toDataURL("image/png");
+
+  // Use imagens PNG para os aliases em vez de addCanvas: o renderer WebGL do
+  // Phaser pode rejeitar uma mesma instância de canvas como textura múltipla.
   for (const key of keys) {
-    if (!scene.textures.exists(key)) scene.textures.addCanvas(key, canvas);
+    if (!scene.textures.exists(key)) scene.textures.addBase64(key, dataUrl);
   }
 }
