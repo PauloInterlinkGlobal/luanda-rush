@@ -42,13 +42,17 @@ function sourceOf(scene: Phaser.Scene, key: string): CanvasImageSource | null {
 }
 
 /** Cria a textura de um objecto de rua a partir da folha real. */
-export function buildPropFromSheet(scene: Phaser.Scene, key: string): boolean {
+export function buildPropFromSheet(
+  scene: Phaser.Scene,
+  key: string,
+  frameName: string = key,
+): boolean {
   if (scene.textures.exists(key)) return true;
-  const rect = PROP_RECTS[key];
+  const rect = PROP_RECTS[frameName];
   const img = sourceOf(scene, PROPS_KEY);
   if (!rect || !img) return false;
 
-  const targetH = PROP_HEIGHT[key] ?? 80;
+  const targetH = PROP_HEIGHT[frameName] ?? 80;
   const scale = targetH / rect.h;
   const w = Math.max(4, Math.round(rect.w * scale));
   const h = Math.max(4, Math.round(rect.h * scale));
