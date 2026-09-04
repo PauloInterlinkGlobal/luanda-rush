@@ -24,6 +24,46 @@ import {
   hasFrame,
 } from "./AtlasArt";
 import { hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
+import {
+  buildPersonFromSheet,
+  buildPropFromSheet,
+  hasPersonFrame,
+  hasPropFrame,
+  preloadScenerySheets,
+} from "./SceneryArt";
+
+/** Pessoas reais (folha enviada) usadas pelos lotadores rivais. */
+const NPC_PEOPLE: Record<string, string> = {
+  npc_kito: "ped_estudante",
+  npc_manuel: "ped_mala",
+  npc_debora: "ped_moca",
+  mentor_ze: "ped_gestor",
+};
+
+/** Figurantes que só dão ambiente à paragem. */
+export const AMBIENT_PEOPLE = ["ped_senhora", "ped_gestor", "ped_capuz"] as const;
+
+/** Passageiro -> pessoa real da folha. */
+const PASSENGER_PEOPLE: Record<string, string> = {
+  NORMAL: "ped_gestor",
+  APRESSADO: "ped_estudante",
+  INDECISO: "ped_capuz",
+  OBSERVADOR: "ped_mala",
+  EXIGENTE: "ped_senhora",
+  CORRERIA: "ped_moca",
+  ESPECIAL: "ped_senhora",
+};
+
+/** Objecto do mapa -> frame da folha real de cenário. */
+const PROP_SHEET_KEYS: Record<string, string> = {
+  tree: "prop_tree",
+  stall: "prop_stall_agua",
+  bench: "prop_bench",
+  sign: "prop_sign_taxi",
+  cone: "prop_cone",
+  shelter: "prop_shelter",
+};
+
 
 
 /** Skins dos NPC lotadores e do mentor (fallback procedural). */
