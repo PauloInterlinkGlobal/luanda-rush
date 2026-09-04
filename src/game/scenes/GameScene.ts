@@ -6,6 +6,8 @@ import { Player } from "../entities/Player";
 import { Passenger } from "../entities/Passenger";
 import { Taxi } from "../entities/Taxi";
 import { LotadorNPC } from "../entities/LotadorNPC";
+import { Pedestrian } from "../entities/Pedestrian";
+import { AMBIENT_PEOPLE } from "../systems/AssetManager";
 import { SpawnManager } from "../systems/SpawnManager";
 import { ComboManager } from "../systems/ComboManager";
 import { EconomyManager } from "../systems/EconomyManager";
@@ -23,6 +25,7 @@ export class GameScene extends Phaser.Scene {
   private save!: SaveData;
   player!: Player;
   npcs: LotadorNPC[] = [];
+  pedestrians: Pedestrian[] = [];
   spawns!: SpawnManager;
   combo = new ComboManager();
   economy = new EconomyManager();
@@ -86,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     this.spawnNpcs(this.difficulty.current.npcCount);
+    this.spawnPedestrians();
     this.spawns.spawnTaxi(TaxiType.NORMAL);
     for (let i = 0; i < 5; i++) this.spawns.spawnPassenger();
 
@@ -103,6 +107,8 @@ export class GameScene extends Phaser.Scene {
       this.spawns.clear();
       this.npcs.forEach((n) => n.destroy());
       this.npcs = [];
+      this.pedestrians.forEach((p) => p.destroy());
+      this.pedestrians = [];
     });
   }
 
@@ -118,7 +124,19 @@ export class GameScene extends Phaser.Scene {
       const h = Math.min(26, sprite.height * 0.3);
       sprite.body.setSize(w, h);
       sprite.body.setOffset((sprite.width - w) / 2, sprite.height - h);
-      if (kind !== "cone") this.obstacles.add(sprite);
+      this.obstacles.add(sprite);
+    });
+  }
+
+  /** Figurantes que passeiam pela paragem (sem interferir no jogo). */
+  private spawnPedestrians(): void {
+    MAP_CONFIG.ambientSpawns.forEach((spot, i) => {
+      const person = AMBIENT_PEOPLE[i % AMBIENT_PEOPLE.length]!;
+      const key = `amb_${person}`;
+      if (!this.textures.exists(key)) return;
+      const ped = new Pedestrian(this, spot.x, spot.y, key);
+      this.physics.add.collider(ped, this.obstacles);
+      this.pedestrians.push(ped);
     });
   }
 
@@ -419,6 +437,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.spawns.taxis.forEach((t) => t.tick(delta));
     this.npcs.forEach((n) => n.tick(delta));
+    this.pedestrians.forEach((p) => p.tick(delta));
 
     this.missions.evaluate(this.economy.stats, this.combo.level);
     this.callRing.setPosition(this.player.x, this.player.y);
