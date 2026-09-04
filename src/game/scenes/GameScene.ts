@@ -124,7 +124,7 @@ export class GameScene extends Phaser.Scene {
       const h = Math.min(26, sprite.height * 0.3);
       sprite.body.setSize(w, h);
       sprite.body.setOffset((sprite.width - w) / 2, sprite.height - h);
-      if (kind !== "cone") this.obstacles.add(sprite);
+      this.obstacles.add(sprite);
     });
   }
 
