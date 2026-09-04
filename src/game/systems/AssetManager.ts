@@ -23,6 +23,7 @@ import {
   buildTaxiFromAtlas,
   hasFrame,
 } from "./AtlasArt";
+import { registerHiaceTaxiAliases, registerHiaceTaxiTexture } from "./HiaceTaxiArt";
 
 /** Skins dos NPC lotadores e do mentor (fallback procedural). */
 export const NPC_SKINS: Record<string, CharacterSkin> = {
@@ -103,6 +104,12 @@ export class AssetManager {
     });
     this.buildGroundTexture(scene);
     this.registerAnimations(scene);
+  }
+
+  static loadHiaceInBackground(scene: Phaser.Scene): void {
+    void registerHiaceTaxiTexture(scene)
+      .then(() => registerHiaceTaxiAliases(scene, Object.values(TAXIS).map((taxi) => `taxi_${taxi.type}`)))
+      .catch((error: unknown) => console.warn("[v0] Hiace GLB não pôde ser convertido para sprite", error));
   }
 
   /** Constrói o sprite do jogador (atlas real, com fallback procedural). */

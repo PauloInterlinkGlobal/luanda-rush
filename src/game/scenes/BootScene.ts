@@ -43,5 +43,6 @@ export class BootScene extends Phaser.Scene {
     const save = SaveManager.load();
     AssetManager.buildAll(this, save.character);
     this.scene.start("Menu");
+    window.setTimeout(() => AssetManager.loadHiaceInBackground(this), 0);
   }
 }
