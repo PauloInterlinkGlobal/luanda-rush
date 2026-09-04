@@ -99,6 +99,7 @@ export class AssetManager {
       scene.load.image(PLAYER_SHEET_KEY, PLAYER_SHEET_URL);
     }
     preloadTaxiSheets(scene);
+    preloadScenerySheets(scene);
   }
 
 
@@ -108,13 +109,24 @@ export class AssetManager {
 
     this.buildPlayer(scene, playerSkin);
     Object.entries(NPC_SKINS).forEach(([key, skin]) => {
+      const person = NPC_PEOPLE[key];
+      // Pessoas reais (folha enviada) têm prioridade.
+      if (person && hasPersonFrame(person) && buildPersonFromSheet(scene, key, person)) return;
       const atlas = ATLAS_CHARACTERS[key];
       if (!atlas || !buildCharacterFromAtlas(scene, key, atlas)) {
         buildCharacterSheet(scene, key, skin);
       }
     });
+    // Figurantes de ambiente
+    AMBIENT_PEOPLE.forEach((person) => {
+      buildPersonFromSheet(scene, `amb_${person}`, person);
+    });
     Object.values(PASSENGERS).forEach((p) => {
       const key = `pass_${p.type}`;
+      const person = PASSENGER_PEOPLE[p.type];
+      const shirt = PALETTE.shirts[p.skin.shirt % PALETTE.shirts.length];
+      if (person && hasPersonFrame(person) && buildPersonFromSheet(scene, key, person, shirt))
+        return;
       if (!hasFrame(key) || !buildCharacterFromAtlas(scene, key, { down: key })) {
         buildCharacterSheet(scene, key, p.skin);
       }
@@ -138,8 +150,11 @@ export class AssetManager {
       cone: [30, 40],
       wall: [120, 90],
     };
-    ["tree", "stall", "bin", "lamp", "bench", "sign", "cone", "wall"].forEach((k) => {
+    ["tree", "stall", "bin", "lamp", "bench", "sign", "cone", "wall", "shelter"].forEach((k) => {
       const [w, h] = PROP_SIZE[k] ?? [64, 64];
+      const frame = PROP_SHEET_KEYS[k];
+      // Objectos reais (folha de cenário enviada) têm prioridade.
+      if (frame && hasPropFrame(frame) && buildPropFromSheet(scene, `prop_${k}`, frame)) return;
       if (!hasFrame(`prop_${k}`) || !buildSpriteFromAtlas(scene, `prop_${k}`, `prop_${k}`, w, h)) {
         buildPropTexture(scene, k);
       }
@@ -241,7 +256,11 @@ export class AssetManager {
 
   /** Regista as animações de todos os personagens e táxis. */
   static registerAnimations(scene: Phaser.Scene): void {
-    ["player", ...Object.keys(NPC_SKINS)].forEach((k) =>
+    [
+      "player",
+      ...Object.keys(NPC_SKINS),
+      ...AMBIENT_PEOPLE.map((p) => `amb_${p}`),
+    ].forEach((k) =>
       this.registerCharacterAnims(scene, k, false),
     );
     Object.values(PASSENGERS).forEach((p) =>
