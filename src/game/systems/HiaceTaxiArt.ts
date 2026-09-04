@@ -1,81 +1,46 @@
-import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type Phaser from "phaser";
 
-const MODEL_URL = "/hiace_van.glb";
-const CANVAS_SIZE = 256;
+const TAXI_IMAGE_URL = "/hiace_van.png";
+const CANVAS_WIDTH = 256;
+const CANVAS_HEIGHT = 128;
 
 let renderPromise: Promise<HTMLCanvasElement> | undefined;
 
-async function loadModel(): Promise<THREE.Group> {
-  const response = await fetch(MODEL_URL, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Não foi possível carregar ${MODEL_URL}: ${response.status}`);
-  const buffer = await response.arrayBuffer();
-
+function loadTaxiImage(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    new GLTFLoader().parse(buffer, "/", (gltf) => resolve(gltf.scene), reject);
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Não foi possível carregar ${TAXI_IMAGE_URL}`));
+    image.src = TAXI_IMAGE_URL;
   });
 }
 
 async function renderHiace(): Promise<HTMLCanvasElement> {
-  const webglCanvas = document.createElement("canvas");
-  webglCanvas.width = CANVAS_SIZE;
-  webglCanvas.height = CANVAS_SIZE;
-  const outputCanvas = document.createElement("canvas");
-  outputCanvas.width = CANVAS_SIZE;
-  outputCanvas.height = CANVAS_SIZE;
+  const image = await loadTaxiImage();
+  const canvas = document.createElement("canvas");
+  canvas.width = CANVAS_WIDTH;
+  canvas.height = CANVAS_HEIGHT;
 
-  const renderer = new THREE.WebGLRenderer({ canvas: webglCanvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(1);
-  renderer.setSize(CANVAS_SIZE, CANVAS_SIZE, false);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.setClearColor(0x000000, 0);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Não foi possível criar o canvas do táxi Hiace");
 
-  const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xfff4d6, 0x243047, 2.8));
-  const key = new THREE.DirectionalLight(0xffffff, 4);
-  key.position.set(4, 8, 6);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffc31f, 1.2);
-  fill.position.set(-5, 3, -4);
-  scene.add(fill);
+  context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  context.imageSmoothingEnabled = true;
 
-  const model = await loadModel();
-  model.traverse((object) => {
-    if (object instanceof THREE.Mesh) {
-      object.castShadow = false;
-      object.receiveShadow = false;
-      object.material = Array.isArray(object.material)
-        ? object.material.map((material) => material.clone())
-        : object.material.clone();
-    }
-  });
-  scene.add(model);
+  // A imagem fornecida é a vista lateral definitiva do jogo. Mantemos a
+  // proporção e o fundo transparente, sem perspectiva ou renderização 3D.
+  const scale = Math.min(
+    (CANVAS_WIDTH - 8) / image.naturalWidth,
+    (CANVAS_HEIGHT - 8) / image.naturalHeight,
+  );
+  const width = image.naturalWidth * scale;
+  const height = image.naturalHeight * scale;
+  const x = (CANVAS_WIDTH - width) / 2;
+  const y = (CANVAS_HEIGHT - height) / 2;
+  context.drawImage(image, x, y, width, height);
 
-  const box = new THREE.Box3().setFromObject(model);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxSize = Math.max(size.x, size.y, size.z);
-  model.position.sub(center);
-  model.position.y -= size.y * 0.08;
-  model.rotation.y = -Math.PI * 0.16;
-
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100);
-  const viewSize = maxSize * 1.28;
-  camera.left = -viewSize;
-  camera.right = viewSize;
-  camera.top = viewSize;
-  camera.bottom = -viewSize;
-  camera.position.set(maxSize * 1.5, maxSize * 0.95, maxSize * 1.7);
-  camera.lookAt(0, 0, 0);
-  camera.updateProjectionMatrix();
-
-  renderer.render(scene, camera);
-  const outputContext = outputCanvas.getContext("2d");
-  if (!outputContext) throw new Error("Não foi possível criar o canvas 2D do táxi Hiace");
-  outputContext.drawImage(renderer.domElement, 0, 0);
-  renderer.dispose();
-  return outputCanvas;
+  return canvas;
 }
 
 export async function registerHiaceTaxiTexture(scene: Phaser.Scene): Promise<void> {
@@ -92,9 +57,16 @@ export async function registerHiaceTaxiAliases(scene: Phaser.Scene, keys: string
   const canvas = await renderPromise;
   const dataUrl = canvas.toDataURL("image/png");
 
-  // Use imagens PNG para os aliases em vez de addCanvas: o renderer WebGL do
-  // Phaser pode rejeitar uma mesma instância de canvas como textura múltipla.
   for (const key of keys) {
     if (!scene.textures.exists(key)) scene.textures.addBase64(key, dataUrl);
   }
 }
+
+export function getHiaceTaxiTextureSize(): { width: number; height: number } {
+  return { width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+}
+
+export const HIACE_TAXI_IMAGE_URL = TAXI_IMAGE_URL;
+
+void getHiaceTaxiTextureSize;
+void HIACE_TAXI_IMAGE_URL;
