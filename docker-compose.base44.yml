@@ -1,0 +1,21 @@
+services:
+  web:
+    image: oven/bun:1.2
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:8080"
+    environment:
+      - HOST=0.0.0.0
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      - BASE44_PUBLIC_HOST_SUFFIX
+      - BASE44_SANDBOX_HOST_DOMAIN
+    command: sh -c "bun install --frozen-lockfile && bun run dev"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
