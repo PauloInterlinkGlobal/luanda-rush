@@ -24,8 +24,8 @@ export const PROP_HEIGHT: Record<string, number> = {
 };
 
 export function preloadScenerySheets(scene: Phaser.Scene): void {
-  if (!scene.textures.exists(PROPS_KEY)) scene.load.image(PROPS_KEY, PROPS_ASSET.url);
-  if (!scene.textures.exists(PEOPLE_KEY)) scene.load.image(PEOPLE_KEY, PEOPLE_ASSET.url);
+  if (!scene.textures.exists(PROPS_KEY)) scene.load.image(PROPS_KEY, "/assets/props_street.png");
+  if (!scene.textures.exists(PEOPLE_KEY)) scene.load.image(PEOPLE_KEY, "/assets/npcs_people.png");
 }
 
 export function hasPropFrame(name: string): boolean {
@@ -163,11 +163,10 @@ export function buildPersonFromSheet(
   });
 
   tex.refresh();
-  const src = tex.getSourceImage() as HTMLCanvasElement;
-  scene.textures.remove(key);
-  scene.textures.addSpriteSheet(key, src as unknown as HTMLImageElement, {
-    frameWidth: FRAME_W,
-    frameHeight: FRAME_H,
-  });
+  for (let row = 0; row < DIR_ROWS.length; row += 1) {
+    for (let col = 0; col < FRAMES_PER_ROW; col += 1) {
+      tex.add(String(row * FRAMES_PER_ROW + col), 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+    }
+  }
   return true;
 }
