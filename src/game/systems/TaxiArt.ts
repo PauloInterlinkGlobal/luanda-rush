@@ -22,18 +22,43 @@ export const TAXI_SHEETS: Record<TaxiType, string> = {
 /** Pré-carrega as folhas reais dos táxis. */
 export function preloadTaxiSheets(scene: Phaser.Scene): void {
   (Object.entries(TAXI_SHEETS) as [TaxiType, string][]).forEach(([type, url]) => {
-    const key = `taxi_${type}`;
+    const key = `taxi_src_${type}`;
     if (scene.textures.exists(key)) return;
-    scene.load.spritesheet(key, url, {
-      frameWidth: TAXI_SHEET_W,
-      frameHeight: TAXI_SHEET_H,
-    });
+    // As artes fornecidas são imagens individuais 1200x600, não spritesheets.
+    scene.load.image(key, url);
   });
 }
 
-/** true quando a folha real já está registada com os 2 frames. */
+/** Cria a textura jogável a partir da imagem individual da Hiace. */
+export function buildTaxiFromSheet(scene: Phaser.Scene, key: string): boolean {
+  if (scene.textures.exists(key)) return true;
+  const sourceKey = key.replace("taxi_", "taxi_src_");
+  if (!scene.textures.exists(sourceKey)) return false;
+
+  const source = scene.textures.get(sourceKey).getSourceImage() as CanvasImageSource;
+  const texture = scene.textures.createCanvas(key, TAXI_SHEET_W, TAXI_SHEET_H);
+  if (!texture) return false;
+  const ctx = texture.getContext();
+  ctx.clearRect(0, 0, TAXI_SHEET_W, TAXI_SHEET_H);
+  ctx.imageSmoothingEnabled = true;
+
+  const drawW = TAXI_SHEET_W - 4;
+  const drawH = Math.round(drawW * 0.5);
+  const drawY = TAXI_SHEET_H - drawH - 2;
+  ctx.drawImage(source, 0, 0, source.width, source.height, 2, drawY, drawW, drawH);
+  texture.refresh();
+
+  const canvas = texture.getSourceImage() as HTMLCanvasElement;
+  scene.textures.remove(key);
+  scene.textures.addSpriteSheet(key, canvas as unknown as HTMLImageElement, {
+    frameWidth: TAXI_SHEET_W,
+    frameHeight: TAXI_SHEET_H,
+  });
+  return true;
+}
+
+/** true quando a folha real já está registada com o frame jogável. */
 export function hasTaxiSheet(scene: Phaser.Scene, key: string): boolean {
   if (!scene.textures.exists(key)) return false;
-  const tex = scene.textures.get(key);
-  return tex.has("0") && tex.has("1");
+  return scene.textures.get(key).has("0");
 }

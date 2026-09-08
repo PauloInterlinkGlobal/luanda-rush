@@ -23,7 +23,7 @@ import {
   buildTaxiFromAtlas,
   hasFrame,
 } from "./AtlasArt";
-import { hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
+import { buildTaxiFromSheet, hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
 import {
   buildPersonFromSheet,
   buildPropFromSheet,
@@ -133,8 +133,8 @@ export class AssetManager {
     });
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
-      // Folha real da Hiace (renderizada do modelo 3D) tem prioridade.
-      if (hasTaxiSheet(scene, key)) return;
+      // A Hiace fornecida tem prioridade; atlas/procedural ficam como fallback.
+      if (buildTaxiFromSheet(scene, key) || hasTaxiSheet(scene, key)) return;
       if (!hasFrame(key) || !buildTaxiFromAtlas(scene, key, key)) {
         buildTaxiTexture(scene, key, t.bodyColor, t.roofColor);
       }
