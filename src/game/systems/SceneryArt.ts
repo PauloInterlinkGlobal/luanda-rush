@@ -105,9 +105,13 @@ export function buildPersonFromSheet(
 
   const sheetW = FRAME_W * FRAMES_PER_ROW;
   const sheetH = FRAME_H * DIR_ROWS.length;
-  const tex = scene.textures.createCanvas(key, sheetW, sheetH);
-  if (!tex) return false;
-  const ctx = tex.getContext();
+  // Canvas próprio (não usar textures.createCanvas + remove: o canvas volta
+  // ao pool do Phaser e é reutilizado pela pessoa seguinte, corrompendo tudo).
+  const canvas = document.createElement("canvas");
+  canvas.width = sheetW;
+  canvas.height = sheetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
   ctx.clearRect(0, 0, sheetW, sheetH);
 
   // Recorte redimensionado (uma vez) num canvas auxiliar
