@@ -31,21 +31,34 @@ export function buildTaxiFromSheet(scene: Phaser.Scene, key: string): boolean {
   if (!scene.textures.exists(sourceKey)) return false;
 
   const source = scene.textures.get(sourceKey).getSourceImage() as CanvasImageSource;
-  const texture = scene.textures.createCanvas(key, TAXI_SHEET_W, TAXI_SHEET_H);
+  const texture = scene.textures.createCanvas(key, TAXI_SHEET_W * 2, TAXI_SHEET_H);
   if (!texture) return false;
   const ctx = texture.getContext();
-  ctx.clearRect(0, 0, TAXI_SHEET_W, TAXI_SHEET_H);
+  ctx.clearRect(0, 0, TAXI_SHEET_W * 2, TAXI_SHEET_H);
   ctx.imageSmoothingEnabled = true;
 
+  const frameW = Math.floor(source.width / 2);
   const drawW = TAXI_SHEET_W - 4;
-  const drawH = Math.round(drawW * 0.5);
+  const drawH = Math.min(TAXI_SHEET_H - 4, Math.round(drawW * (source.height / frameW)));
   const drawY = TAXI_SHEET_H - drawH - 2;
-  ctx.drawImage(source, 0, 0, source.width, source.height, 2, drawY, drawW, drawH);
-  texture.refresh();
 
-  // CanvasTexture já é a textura final; adicionamos frames válidos manualmente
-  // para que Phaser consiga usar frame 0 sem tentar interpretar a imagem original.
+  // As imagens fornecidas têm duas vans lado a lado: cada metade é um frame.
+  for (let frame = 0; frame < 2; frame += 1) {
+    ctx.drawImage(
+      source,
+      frame * frameW,
+      0,
+      frameW,
+      source.height,
+      frame * TAXI_SHEET_W + 2,
+      drawY + (frame === 1 ? 1 : 0),
+      drawW,
+      drawH,
+    );
+  }
+  texture.refresh();
   texture.add("0", 0, 0, 0, TAXI_SHEET_W, TAXI_SHEET_H);
+  texture.add("1", 0, TAXI_SHEET_W, 0, TAXI_SHEET_W, TAXI_SHEET_H);
   return true;
 }
 
