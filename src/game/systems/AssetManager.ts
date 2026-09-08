@@ -271,7 +271,7 @@ export class AssetManager {
     [
       "player",
       ...Object.keys(NPC_SKINS),
-      ...AMBIENT_PEOPLE.map((p) => `amb_${p}`),
+      ...AMBIENT_KEYS,
     ].forEach((k) =>
       this.registerCharacterAnims(scene, k, false),
     );
