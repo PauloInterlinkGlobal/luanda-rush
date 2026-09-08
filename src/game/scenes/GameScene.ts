@@ -7,7 +7,7 @@ import { Passenger } from "../entities/Passenger";
 import { Taxi } from "../entities/Taxi";
 import { LotadorNPC } from "../entities/LotadorNPC";
 import { Pedestrian } from "../entities/Pedestrian";
-import { AMBIENT_PEOPLE } from "../systems/AssetManager";
+import { AMBIENT_KEYS } from "../systems/AssetManager";
 import { SpawnManager } from "../systems/SpawnManager";
 import { ComboManager } from "../systems/ComboManager";
 import { EconomyManager } from "../systems/EconomyManager";
@@ -130,10 +130,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Figurantes que passeiam pela paragem (sem interferir no jogo). */
   private spawnPedestrians(): void {
+    const keys = AMBIENT_KEYS.filter((k) => this.textures.exists(k));
+    if (keys.length === 0) return;
     MAP_CONFIG.ambientSpawns.forEach((spot, i) => {
-      const person = AMBIENT_PEOPLE[i % AMBIENT_PEOPLE.length]!;
-      const key = `amb_${person}`;
-      if (!this.textures.exists(key)) return;
+      const key = keys[(i + Phaser.Math.Between(0, keys.length - 1)) % keys.length]!;
       const ped = new Pedestrian(this, spot.x, spot.y, key);
       this.physics.add.collider(ped, this.obstacles);
       this.pedestrians.push(ped);
