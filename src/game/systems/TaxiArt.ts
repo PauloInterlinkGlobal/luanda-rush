@@ -1,10 +1,5 @@
 import Phaser from "phaser";
 import { TaxiType } from "../types";
-import NORMAL from "../../assets/taxi_NORMAL.png.asset.json";
-import RAPIDO from "../../assets/taxi_RAPIDO.png.asset.json";
-import GRANDE from "../../assets/taxi_GRANDE.png.asset.json";
-import ESPECIAL from "../../assets/taxi_ESPECIAL.png.asset.json";
-import DOURADO from "../../assets/taxi_DOURADO.png.asset.json";
 
 /** Dimensões de cada frame das folhas renderizadas da Hiace. */
 export const TAXI_SHEET_W = 148;
@@ -12,11 +7,11 @@ export const TAXI_SHEET_H = 84;
 
 /** Folha (2 frames) por tipo de táxi — todas a mesma carrinha, cores diferentes. */
 export const TAXI_SHEETS: Record<TaxiType, string> = {
-  [TaxiType.NORMAL]: NORMAL.url,
-  [TaxiType.RAPIDO]: RAPIDO.url,
-  [TaxiType.GRANDE]: GRANDE.url,
-  [TaxiType.ESPECIAL]: ESPECIAL.url,
-  [TaxiType.DOURADO]: DOURADO.url,
+  [TaxiType.NORMAL]: "/assets/taxi_blue.png",
+  [TaxiType.RAPIDO]: "/assets/taxi_yellow.png",
+  [TaxiType.GRANDE]: "/assets/taxi_red.png",
+  [TaxiType.ESPECIAL]: "/assets/taxi_green.png",
+  [TaxiType.DOURADO]: "/assets/taxi_yellow.png",
 };
 
 /** Pré-carrega as folhas reais dos táxis. */
@@ -48,12 +43,9 @@ export function buildTaxiFromSheet(scene: Phaser.Scene, key: string): boolean {
   ctx.drawImage(source, 0, 0, source.width, source.height, 2, drawY, drawW, drawH);
   texture.refresh();
 
-  const canvas = texture.getSourceImage() as HTMLCanvasElement;
-  scene.textures.remove(key);
-  scene.textures.addSpriteSheet(key, canvas as unknown as HTMLImageElement, {
-    frameWidth: TAXI_SHEET_W,
-    frameHeight: TAXI_SHEET_H,
-  });
+  // CanvasTexture já é a textura final; adicionamos frames válidos manualmente
+  // para que Phaser consiga usar frame 0 sem tentar interpretar a imagem original.
+  texture.add("0", 0, 0, 0, TAXI_SHEET_W, TAXI_SHEET_H);
   return true;
 }
 
