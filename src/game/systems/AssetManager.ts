@@ -40,19 +40,30 @@ const NPC_PEOPLE: Record<string, string> = {
   mentor_ze: "ped_gestor",
 };
 
-/** Figurantes que só dão ambiente à paragem. */
-export const AMBIENT_PEOPLE = ["ped_senhora", "ped_gestor", "ped_capuz"] as const;
+/** Figurantes que só dão ambiente à paragem (todas as figuras da folha). */
+export const AMBIENT_PEOPLE = [
+  "ped_mala",
+  "ped_estudante",
+  "ped_senhora",
+  "ped_gestor",
+  "ped_moca",
+  "ped_capuz",
+] as const;
 
-/** Passageiro -> pessoa real da folha. */
+/** Variações de cor de roupa dos figurantes. */
+export const AMBIENT_TINTS = [0xffc31f, 0x2b5fae, 0x36b45a, 0xe23b3b, 0xf5f2e8] as const;
+
+/** Passageiro -> pessoa real da folha (uma figura distinta por tipo). */
 const PASSENGER_PEOPLE: Record<string, string> = {
-  NORMAL: "ped_gestor",
-  APRESSADO: "ped_estudante",
+  NORMAL: "ped_mala",
+  APRESSADO: "ped_moca",
   INDECISO: "ped_capuz",
-  OBSERVADOR: "ped_mala",
+  OBSERVADOR: "ped_estudante",
   EXIGENTE: "ped_senhora",
-  CORRERIA: "ped_moca",
-  ESPECIAL: "ped_senhora",
+  CORRERIA: "ped_estudante",
+  ESPECIAL: "ped_gestor",
 };
+
 
 /** Objecto do mapa -> frame da folha real de cenário. */
 const PROP_SHEET_KEYS: Record<string, string> = {
