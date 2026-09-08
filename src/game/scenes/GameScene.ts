@@ -7,7 +7,7 @@ import { Passenger } from "../entities/Passenger";
 import { Taxi } from "../entities/Taxi";
 import { LotadorNPC } from "../entities/LotadorNPC";
 import { Pedestrian } from "../entities/Pedestrian";
-import { AMBIENT_PEOPLE } from "../systems/AssetManager";
+import { AMBIENT_KEYS } from "../systems/AssetManager";
 import { SpawnManager } from "../systems/SpawnManager";
 import { ComboManager } from "../systems/ComboManager";
 import { EconomyManager } from "../systems/EconomyManager";
