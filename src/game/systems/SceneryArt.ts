@@ -162,6 +162,10 @@ export function buildPersonFromSheet(
     }
   });
 
+  // Regista o canvas no TextureManager antes de criar os frames Phaser.
+  // Sem este passo `tex` não existe e o BootScene falha ao construir NPCs.
+  const tex = scene.textures.addCanvas(key, canvas);
+  if (!tex) return false;
   tex.refresh();
   for (let row = 0; row < DIR_ROWS.length; row += 1) {
     for (let col = 0; col < FRAMES_PER_ROW; col += 1) {
