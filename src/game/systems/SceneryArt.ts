@@ -74,25 +74,28 @@ export function buildPropFromSheet(
   return true;
 }
 
-/** Recolor simples da zona do tronco, para variar passageiros. */
-function tintShirt(ctx: CanvasRenderingContext2D, w: number, h: number, color: number): void {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, h * 0.3, w, h * 0.28);
-  ctx.clip();
-  ctx.globalCompositeOperation = "color";
-  ctx.globalAlpha = 0.85;
-  ctx.fillStyle = css(color);
-  ctx.fillRect(0, h * 0.3, w, h * 0.28);
-  ctx.restore();
+/** Constrói a arte real sem permitir que um recorte inválido derrube o BootScene. */
+export function buildPersonFromSheet(
+  scene: Phaser.Scene,
+  key: string,
+  personKey: string,
+  shirt?: number,
+): boolean {
+  try {
+    return buildPersonFromSheetUnsafe(scene, key, personKey, shirt);
+  } catch (error) {
+    console.warn(`[v0] Falha ao construir personagem ${personKey}; usando fallback.`, error);
+    return false;
+  }
 }
+
 
 /**
  * Gera um spritesheet 6x4 (idle/andar/especial x 4 direcções) a partir do
  * frame frontal de uma pessoa real. Lado = frame espelhado; costas = frame
  * frontal ligeiramente escurecido. Mantém o formato usado pelo motor.
  */
-export function buildPersonFromSheet(
+function buildPersonFromSheetUnsafe(
   scene: Phaser.Scene,
   key: string,
   personKey: string,
