@@ -11,6 +11,7 @@ export class HUDScene extends Phaser.Scene {
   private timer!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
+  private flowText!: Phaser.GameObjects.Text;
   private staminaBar!: Phaser.GameObjects.Rectangle;
   private rushText!: Phaser.GameObjects.Text;
   private isPaused = false;
@@ -32,6 +33,7 @@ export class HUDScene extends Phaser.Scene {
     this.timer = this.text(width / 2, 16, "3:00", 24, HEX.white, 0.5);
     this.comboText = this.text(width - 16, 16, "COMBO x1", 20, HEX.yellow, 1);
     this.levelText = this.text(16, 62, `NÍVEL ${save.level} · ${levelTitle(save.level)}`, 13, HEX.muted, 0);
+    this.flowText = this.text(width / 2, 88, "PASSAGEIROS 0 · PERDIDOS 0", 12, HEX.muted, 0.5);
 
     this.add.rectangle(16, 84, 160, 10, 0x000000, 0.5).setOrigin(0, 0.5);
     this.staminaBar = this.add.rectangle(16, 84, 160, 10, 0x36b45a).setOrigin(0, 0.5);
@@ -137,6 +139,9 @@ export class HUDScene extends Phaser.Scene {
     this.timer.setColor(s <= 20 ? HEX.red : HEX.white);
     this.comboText.setText(`COMBO x${g.combo.level}`);
     this.comboText.setScale(g.combo.level > 1 ? 1.08 : 1);
+    this.flowText.setText(
+      `PASSAGEIROS ${g.economy.stats.passengers} · PERDIDOS ${g.economy.stats.lostPassengers}`,
+    );
     this.staminaBar.width = 160 * (g.player.stamina / g.player.maxStamina);
     this.staminaBar.fillColor = g.player.tired ? 0xe23b3b : 0x36b45a;
     this.rushText.setVisible(g.isRush);

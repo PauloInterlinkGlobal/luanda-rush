@@ -50,17 +50,19 @@ export class Passenger extends Character {
 
   private createBubble(scene: Phaser.Scene): Phaser.GameObjects.Container {
     const color = DESTINATION_COLORS[this.destination];
-    const bg = scene.add.rectangle(0, 0, 82, 24, color, 0.95).setStrokeStyle(2, 0x0e1a33);
+    const bg = scene.add.rectangle(0, 0, 112, 34, color, 0.95).setStrokeStyle(2, 0x0e1a33);
     const text = scene.add
-      .text(0, 0, this.destination, {
+      .text(0, -5, `${this.def.label} · ${this.destination}`, {
         fontFamily: "'Trebuchet MS', sans-serif",
         fontSize: "13px",
         color: HEX.white,
         fontStyle: "bold",
       })
       .setOrigin(0.5);
-    const tail = scene.add.triangle(0, 14, -6, 0, 6, 0, 0, 8, color);
-    const c = scene.add.container(this.x, this.y - 46, [bg, tail, text]);
+    const patienceBar = scene.add.rectangle(-48, 12, 96, 3, 0x0e1a33, 0.7).setOrigin(0, 0.5);
+    patienceBar.setName("patience-bar");
+    const tail = scene.add.triangle(0, 21, -6, 0, 6, 0, 0, 8, color);
+    const c = scene.add.container(this.x, this.y - 52, [bg, tail, text, patienceBar]);
     c.setDepth(100000);
     return c;
   }
@@ -186,9 +188,12 @@ export class Passenger extends Character {
     );
     this.refreshDepth();
 
-    // Balão de destino
-    this.bubble.setPosition(this.x, this.y - 46);
+    // Balão de destino e urgência visual para facilitar decisões rápidas.
+    this.bubble.setPosition(this.x, this.y - 52);
     this.bubble.setAlpha(this.alpha);
+    const patienceBar = this.bubble.getByName("patience-bar") as Phaser.GameObjects.Rectangle;
+    patienceBar.width = 96 * this.patienceRatio;
+    patienceBar.fillColor = this.patienceRatio < 0.3 ? 0xe23b3b : 0x36b45a;
     if (this.state === PassengerState.WAITING || this.state === PassengerState.SEARCHING) {
       const urgent = this.patienceRatio < 0.3;
       this.bubble.setScale(urgent ? 1 + Math.sin(this.scene.time.now / 120) * 0.06 : 1);
