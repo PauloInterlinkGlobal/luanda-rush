@@ -53,6 +53,9 @@ export const AMBIENT_PEOPLE = [
 /** Variações de cor de roupa dos figurantes. */
 export const AMBIENT_TINTS = [0xffc31f, 0x2b5fae, 0x36b45a, 0xe23b3b, 0xf5f2e8] as const;
 
+/** Todas as texturas de figurante disponíveis. */
+export const AMBIENT_KEYS: string[] = AMBIENT_PEOPLE.flatMap((p) => [`amb_${p}`, `amb_${p}_b`]);
+
 /** Passageiro -> pessoa real da folha (uma figura distinta por tipo). */
 const PASSENGER_PEOPLE: Record<string, string> = {
   NORMAL: "ped_mala",
