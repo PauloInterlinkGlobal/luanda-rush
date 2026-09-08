@@ -128,9 +128,10 @@ export class AssetManager {
         buildCharacterSheet(scene, key, skin);
       }
     });
-    // Figurantes de ambiente
-    AMBIENT_PEOPLE.forEach((person) => {
+    // Figurantes de ambiente (versão original + variante de roupa)
+    AMBIENT_PEOPLE.forEach((person, i) => {
       buildPersonFromSheet(scene, `amb_${person}`, person);
+      buildPersonFromSheet(scene, `amb_${person}_b`, person, AMBIENT_TINTS[i % AMBIENT_TINTS.length]);
     });
     Object.values(PASSENGERS).forEach((p) => {
       const key = `pass_${p.type}`;
