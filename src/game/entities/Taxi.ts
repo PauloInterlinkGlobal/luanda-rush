@@ -18,6 +18,8 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
   override state: TaxiState = TaxiState.ARRIVING;
   slotIndex: number;
   arrivedAt = 0;
+  /** Tutorial: fica à espera indefinidamente (não parte por tempo). */
+  frozenWait = false;
 
   private targetX: number;
   private label: Phaser.GameObjects.Container;
