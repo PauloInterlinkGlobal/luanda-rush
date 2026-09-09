@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { HEX } from "../config/GameConfig";
 import { BALANCE } from "../config/BalanceConfig";
 import { SaveManager, levelTitle } from "../systems/SaveManager";
+import { audio } from "../systems/AudioManager";
 import type { GameScene } from "./GameScene";
 
 /** HUD por cima do jogo: dinheiro, combo, tempo, stamina, joystick e botões. */
@@ -13,6 +14,7 @@ export class HUDScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private flowText!: Phaser.GameObjects.Text;
   private tutorialText!: Phaser.GameObjects.Text;
+  private tutorialPanel?: Phaser.GameObjects.Container;
   private staminaBar!: Phaser.GameObjects.Rectangle;
   private rushText!: Phaser.GameObjects.Text;
   private isPaused = false;
@@ -44,6 +46,7 @@ export class HUDScene extends Phaser.Scene {
     this.rushText.setVisible(false);
 
     this.buildTouchControls();
+    if (this.game_.tutorialMode) this.buildTycoonTutorial(width, height);
 
     this.game_.events.on("paused", (p: boolean) => {
       this.isPaused = p;
@@ -136,6 +139,32 @@ export class HUDScene extends Phaser.Scene {
     this.button(width - 40, 84, "II", "hud-pause", 22);
 
     [this.stickBase, this.stickThumb].forEach((control) => control.setDepth(1000));
+  }
+
+  private buildTycoonTutorial(width: number, height: number): void {
+    const panelWidth = Math.min(520, width - 32);
+    const panel = this.add.container(width / 2, height / 2).setDepth(2000);
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x071225, 0.78).setOrigin(0.5);
+    const card = this.add.rectangle(0, 0, panelWidth, 250, 0x16305c, 0.98).setStrokeStyle(4, 0xffc31f);
+    const roof = this.add.rectangle(0, -91, 170, 34, 0xffc31f).setStrokeStyle(3, 0x0e1a33);
+    const roofText = this.add.text(0, -91, "CENTRAL DE OPERAÇÃO", { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "16px", color: "#0e1a33" }).setOrigin(0.5);
+    const icon = this.add.circle(-panelWidth / 2 + 58, -20, 31, 0xffc31f).setStrokeStyle(3, 0x0e1a33);
+    const iconText = this.add.text(icon.x, icon.y, "1", { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "28px", color: "#0e1a33" }).setOrigin(0.5);
+    const title = this.add.text(-panelWidth / 2 + 105, -42, "PRIMEIRO TURNO", { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "25px", color: HEX.yellow }).setOrigin(0, 0.5);
+    const route = this.add.text(-panelWidth / 2 + 105, 0, "MOVER  →  APROXIMAR  →  CHAMAR", { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "17px", color: HEX.white }).setOrigin(0, 0.5);
+    const arrow = this.add.text(0, 54, "↓", { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "30px", color: HEX.yellow }).setOrigin(0.5);
+    const action = this.add.rectangle(0, 91, 250, 48, 0xffc31f).setStrokeStyle(3, 0x0e1a33).setInteractive({ useHandCursor: true });
+    const actionText = this.add.text(0, 91, "COMEÇAR TURNO", { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "22px", color: "#0e1a33" }).setOrigin(0.5);
+    action.on("pointerdown", () => {
+      audio.ui();
+      panel.destroy();
+      this.tutorialPanel = undefined;
+      this.game_.advanceTutorial("MOVER");
+    });
+    panel.add([backdrop, card, roof, roofText, icon, iconText, title, route, arrow, action, actionText]);
+    this.tutorialPanel = panel;
+    this.tweens.add({ targets: arrow, y: 62, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: action, scale: 1.05, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
   override update(): void {

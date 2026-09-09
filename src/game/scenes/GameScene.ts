@@ -55,6 +55,7 @@ export class GameScene extends Phaser.Scene {
     this.paused = false;
     this.timeLeft = BALANCE.matchDuration;
     this.tutorialMode = this.registry.get("tutorial") === true;
+    this.paused = this.tutorialMode;
     this.tutorialTimerStarted = false;
     this.tutorialStep = "MOVER";
     this.combo.reset();
@@ -462,6 +463,15 @@ export class GameScene extends Phaser.Scene {
 
     this.missions.evaluate(this.economy.stats, this.combo.level);
     this.callRing.setPosition(this.player.x, this.player.y);
+  }
+
+  advanceTutorial(action: "MOVER" | "CHAMAR"): void {
+    if (!this.tutorialMode) return;
+    if (action === "MOVER" && this.tutorialStep === "MOVER") {
+      this.paused = false;
+      this.tutorialStep = "ENCONTRAR PASSAGEIRO";
+      this.events.emit("paused", false);
+    }
   }
 
   private updateTutorialState(dx: number, dy: number): void {
