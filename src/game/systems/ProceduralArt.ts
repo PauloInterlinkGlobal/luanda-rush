@@ -172,9 +172,13 @@ export function buildCharacterSheet(
   if (scene.textures.exists(key)) return;
   const w = FRAME_W * FRAMES_PER_ROW;
   const h = FRAME_H * DIR_ROWS.length;
-  const tex = scene.textures.createCanvas(key, w, h);
-  if (!tex) return;
-  const ctx = tex.getContext();
+  // Canvas próprio (não usar textures.createCanvas + remove: o canvas volta
+  // ao pool do Phaser e é reutilizado, corrompendo a textura).
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
   ctx.clearRect(0, 0, w, h);
   DIR_ROWS.forEach((dir, row) => {
     for (let col = 0; col < FRAMES_PER_ROW; col++) {
@@ -185,14 +189,14 @@ export function buildCharacterSheet(
       else drawCharacter(ctx, ox, oy, skin, dir, col - 1, "walk");
     }
   });
+  const tex = scene.textures.addCanvas(key, canvas);
+  if (!tex) return;
   tex.refresh();
-  // Regista o grid de frames para o Phaser saber recortar
-  const src = tex.getSourceImage() as HTMLCanvasElement;
-  scene.textures.remove(key);
-  scene.textures.addSpriteSheet(key, src as unknown as HTMLImageElement, {
-    frameWidth: FRAME_W,
-    frameHeight: FRAME_H,
-  });
+  for (let i = 0; i < FRAMES_PER_ROW * DIR_ROWS.length; i++) {
+    const col = i % FRAMES_PER_ROW;
+    const row = Math.floor(i / FRAMES_PER_ROW);
+    tex.add(String(i), 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+  }
 }
 
 export const TAXI_W = 132;
@@ -278,13 +282,20 @@ export function buildTaxiTexture(
     ctx.restore();
   }
 
-  tex.refresh();
-  const src = tex.getSourceImage() as HTMLCanvasElement;
+  // Canvas próprio — ver buildCharacterSheet para a justificação.
+  const srcCanvas = document.createElement("canvas");
+  srcCanvas.width = TAXI_W * frames;
+  srcCanvas.height = TAXI_H;
+  const srcCtx = srcCanvas.getContext("2d");
+  if (!srcCtx) return;
+  // Copia o conteúdo do CanvasTexture para o canvas independente.
+  srcCtx.drawImage(tex.getSourceImage() as CanvasImageSource, 0, 0);
   scene.textures.remove(key);
-  scene.textures.addSpriteSheet(key, src as unknown as HTMLImageElement, {
-    frameWidth: TAXI_W,
-    frameHeight: TAXI_H,
-  });
+  const newTex = scene.textures.addCanvas(key, srcCanvas);
+  if (!newTex) return;
+  newTex.refresh();
+  newTex.add("0", 0, 0, 0, TAXI_W, TAXI_H);
+  newTex.add("1", 0, TAXI_W, 0, TAXI_W, TAXI_H);
 }
 
 /** Props de rua. */

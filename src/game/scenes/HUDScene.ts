@@ -181,10 +181,16 @@ export class HUDScene extends Phaser.Scene {
     this.registry.set("runHeld", false);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.registry.set("runHeld", false));
 
-    this.game_.events.on("paused", (p: boolean) => {
+    const pausedHandler = (p: boolean) => {
       this.isPaused = p;
       if (p) this.scene.launch("Pause");
       else this.scene.stop("Pause");
+    };
+    this.game_.events.on("paused", pausedHandler);
+    // Remove o listener ao encerrar o HUD — evita acumulação quando a
+    // cena é recriada (cada create() adicionaria um novo listener).
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game_.events.off("paused", pausedHandler);
     });
 
     this.input.keyboard?.on("keydown-ESC", () => {

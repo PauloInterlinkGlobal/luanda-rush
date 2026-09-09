@@ -69,7 +69,10 @@ export class ResultScene extends Phaser.Scene {
     }
     if (promoted || (this.tutorial && this.won)) {
       this.createConfetti();
-      this.tweens.add({ targets: this.children.list, alpha: { from: 0.78, to: 1 }, duration: 500, yoyo: true, repeat: 2 });
+      // Snapshot dos filhos actuais — não animar botões adicionados depois
+      // nem objectos destruídos pelos tweens de confete.
+      const fadeTargets = [...this.children.list];
+      this.tweens.add({ targets: fadeTargets, alpha: { from: 0.78, to: 1 }, duration: 500, yoyo: true, repeat: 2 });
     }
 
     const lines = [

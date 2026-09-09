@@ -132,6 +132,9 @@ export class GameScene extends Phaser.Scene {
       this.npcs = [];
       this.pedestrians.forEach((p) => p.destroy());
       this.pedestrians = [];
+      // Limpa a referência ao tutorial para que os handlers do HUD
+      // não disparem sobre uma cena já destruída.
+      this.tutorialCtl = null;
     });
   }
 
@@ -225,10 +228,21 @@ export class GameScene extends Phaser.Scene {
 
     // Controlos móveis (emitidos pelo HUD)
     const hud = this.scene.get("HUD");
-    hud.events.on("hud-interact", () => this.interact());
-    hud.events.on("hud-call", () => this.callPassengers());
-    hud.events.on("hud-power", () => this.usePowerUp());
-    hud.events.on("hud-pause", () => this.togglePause());
+    const hudHandlers: Record<string, () => void> = {
+      "hud-interact": () => this.interact(),
+      "hud-call": () => this.callPassengers(),
+      "hud-power": () => this.usePowerUp(),
+      "hud-pause": () => this.togglePause(),
+    };
+    for (const [event, handler] of Object.entries(hudHandlers)) {
+      hud.events.on(event, handler);
+    }
+    // Remove os listeners ao encerrar — evita acumulação quando a cena recomeça.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const [event, handler] of Object.entries(hudHandlers)) {
+        hud.events.off(event, handler);
+      }
+    });
   }
 
   private get joystick(): { x: number; y: number; run: boolean } {
@@ -541,7 +555,12 @@ export class GameScene extends Phaser.Scene {
       missions,
       bestScore: Math.max(save.bestScore, stats.money),
     };
-    if (this.tutorialMode && won === true) patch.tutorialDone = true;
+    if (this.tutorialMode && won === true) {
+      patch.tutorialDone = true;
+      // Limpa a flag do registo para que "JOGAR OUTRA VEZ" inicie um jogo
+      // normal e não repita o tutorial infinitamente.
+      this.registry.set("tutorial", false);
+    }
     SaveManager.update(patch);
     this.scene.stop("HUD");
     this.scene.start("Result", { stats, won: won ?? null, tutorial: this.tutorialMode });
