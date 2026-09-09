@@ -17,6 +17,8 @@ export class Passenger extends Character {
   override state: PassengerState = PassengerState.SPAWNING;
   patience: number;
   value: number;
+  /** Tutorial: nunca perde a paciência nem desiste sozinho. */
+  frozenPatience = false;
 
   /** Quem reclamou este passageiro (jogador ou NPC). */
   claimedBy: Phaser.GameObjects.GameObject | null = null;
@@ -127,9 +129,10 @@ export class Passenger extends Character {
     const dt = delta / 1000;
 
     if (
-      this.state === PassengerState.WAITING ||
-      this.state === PassengerState.SEARCHING ||
-      this.state === PassengerState.APPROACHED
+      !this.frozenPatience &&
+      (this.state === PassengerState.WAITING ||
+        this.state === PassengerState.SEARCHING ||
+        this.state === PassengerState.APPROACHED)
     ) {
       this.patience -= dt;
       if (this.patience <= 0) this.giveUp();

@@ -77,12 +77,10 @@ export class GameScene extends Phaser.Scene {
 
     this.buildProps();
 
-    this.player = new Player(
-      this,
-      MAP_CONFIG.playerSpawn.x,
-      MAP_CONFIG.playerSpawn.y,
-      this.save,
-    );
+    const spawnPoint = this.tutorialMode
+      ? MAP_CONFIG.tutorial.playerSpawn
+      : MAP_CONFIG.playerSpawn;
+    this.player = new Player(this, spawnPoint.x, spawnPoint.y, this.save);
     this.player.on("footstep", () => audio.step());
     this.physics.add.collider(this.player, this.obstacles);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -104,12 +102,15 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.tutorialMode) this.spawnNpcs(this.difficulty.current.npcCount);
     this.spawnPedestrians();
-    this.spawns.spawnTaxi(TaxiType.NORMAL);
     if (this.tutorialMode) {
-      // Passageiro inicial com destino servido pelo táxi do tutorial (sistema real).
-      this.spawns.spawnPassenger(this.spawns.taxis[0]?.destination);
+      // Nível 1: cenário determinístico — 1 táxi, 1 passageiro, 0 rivais.
+      this.spawns.autoSpawn = false;
+      const taxi = this.spawns.spawnTaxi(TaxiType.NORMAL, MAP_CONFIG.tutorial.taxiSlot);
+      if (taxi) taxi.frozenWait = true;
+      this.spawnTutorialPassenger();
       this.tutorialCtl = new TutorialController(this);
     } else {
+      this.spawns.spawnTaxi(TaxiType.NORMAL);
       for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) {
         this.spawns.spawnPassenger();
       }
@@ -160,6 +161,31 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.collider(ped, this.obstacles);
       this.pedestrians.push(ped);
     });
+  }
+
+  /** Nível 1: um único passageiro, sempre no mesmo sítio e com o destino do táxi. */
+  private spawnTutorialPassenger(): void {
+    const taxi = this.spawns.taxis.find((t) => t.active && t.state !== TaxiState.GONE);
+    const p = this.spawns.spawnPassenger(taxi?.destination, MAP_CONFIG.tutorial.passengerSpawn);
+    if (p) p.frozenPatience = true;
+  }
+
+  /**
+   * Nível 1: garante sempre exactamente 1 táxi e 1 passageiro disponíveis,
+   * repondo-os nas posições fixas se algum sair de cena.
+   */
+  private ensureTutorialWorld(): void {
+    const taxi = this.spawns.taxis.find(
+      (t) => t.active && t.state !== TaxiState.GONE && t.state !== TaxiState.DEPARTING,
+    );
+    if (!taxi) {
+      const fresh = this.spawns.spawnTaxi(TaxiType.NORMAL, MAP_CONFIG.tutorial.taxiSlot);
+      if (fresh) fresh.frozenWait = true;
+    }
+    const hasPassenger = this.spawns.passengers.some(
+      (p) => p.active && p.state !== PassengerState.LEAVING && p.state !== PassengerState.COMPLETED,
+    );
+    if (!hasPassenger && this.economy.stats.passengers < 1) this.spawnTutorialPassenger();
   }
 
   private spawnNpcs(count: number): void {
@@ -423,9 +449,11 @@ export class GameScene extends Phaser.Scene {
       d.current.passengerRate,
       d.current.taxiRate,
       this.isRush,
-      Math.min(6, 2 + this.save.fleetLevel),
+      this.tutorialMode ? 1 : Math.min(6, 2 + this.save.fleetLevel),
     );
-    if (!this.tutorialMode) {
+    if (this.tutorialMode) {
+      this.ensureTutorialWorld();
+    } else {
       this.spawnNpcs(Math.min(d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
     }
 

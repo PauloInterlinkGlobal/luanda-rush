@@ -26,6 +26,8 @@ export class SpawnManager {
 
   private passengerTimer = 0;
   private taxiTimer = 1.2;
+  /** No tutorial (nível 1) desliga-se: nada nasce sem ser pedido pela cena. */
+  autoSpawn = true;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
@@ -36,13 +38,16 @@ export class SpawnManager {
       .map((t) => t.destination);
   }
 
-  spawnPassenger(forceDestination?: Destination): Passenger | null {
+  spawnPassenger(
+    forceDestination?: Destination,
+    at?: { x: number; y: number },
+  ): Passenger | null {
     const zone =
       MAP_CONFIG.passengerSpawnZones[
         Math.floor(Math.random() * MAP_CONFIG.passengerSpawnZones.length)
       ]!;
-    const x = zone.x + Math.random() * zone.w;
-    const y = zone.y + Math.random() * zone.h;
+    const x = at ? at.x : zone.x + Math.random() * zone.w;
+    const y = at ? at.y : zone.y + Math.random() * zone.h;
     const type = weightedPick(PASSENGER_WEIGHTS) as PassengerType;
 
     // 70% dos passageiros querem um destino que já tem táxi — mantém o ritmo
@@ -58,13 +63,14 @@ export class SpawnManager {
     return p;
   }
 
-  spawnTaxi(forceType?: TaxiType): Taxi | null {
+  spawnTaxi(forceType?: TaxiType, forceSlot?: number): Taxi | null {
     const usedSlots = new Set(
       this.taxis.filter((t) => t.state !== TaxiState.GONE).map((t) => t.slotIndex),
     );
     const free = MAP_CONFIG.taxiSlots.map((_, i) => i).filter((i) => !usedSlots.has(i));
-    if (free.length === 0) return null;
-    const slot = free[Math.floor(Math.random() * free.length)]!;
+    if (forceSlot !== undefined && usedSlots.has(forceSlot)) return null;
+    if (forceSlot === undefined && free.length === 0) return null;
+    const slot = forceSlot ?? free[Math.floor(Math.random() * free.length)]!;
     const type = forceType ?? (weightedPick(TAXI_WEIGHTS) as TaxiType);
     const destination = DESTINATIONS[Math.floor(Math.random() * DESTINATIONS.length)]!;
     const taxi = new Taxi(this.scene, type, destination, slot);
@@ -83,6 +89,11 @@ export class SpawnManager {
     const dt = delta / 1000;
     const rushFactor = rush ? 0.55 : 1;
 
+    if (!this.autoSpawn) {
+      this.cleanup();
+      return;
+    }
+
     this.passengerTimer -= dt;
     if (this.passengerTimer <= 0) {
       this.passengerTimer = passengerRate * rushFactor;
@@ -98,7 +109,11 @@ export class SpawnManager {
       }
     }
 
-    // Limpeza
+    this.cleanup();
+  }
+
+  /** Remove passageiros e táxis que já saíram de cena. */
+  private cleanup(): void {
     this.passengers = this.passengers.filter((p) => {
       if (!p.active) return false;
       if (p.alpha <= 0.02 || p.state === "COMPLETED") {
