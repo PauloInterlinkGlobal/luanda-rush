@@ -170,6 +170,24 @@ export class GameScene extends Phaser.Scene {
     if (p) p.frozenPatience = true;
   }
 
+  /**
+   * Nível 1: garante sempre exactamente 1 táxi e 1 passageiro disponíveis,
+   * repondo-os nas posições fixas se algum sair de cena.
+   */
+  private ensureTutorialWorld(): void {
+    const taxi = this.spawns.taxis.find(
+      (t) => t.active && t.state !== TaxiState.GONE && t.state !== TaxiState.DEPARTING,
+    );
+    if (!taxi) {
+      const fresh = this.spawns.spawnTaxi(TaxiType.NORMAL, MAP_CONFIG.tutorial.taxiSlot);
+      if (fresh) fresh.frozenWait = true;
+    }
+    const hasPassenger = this.spawns.passengers.some(
+      (p) => p.active && p.state !== PassengerState.LEAVING && p.state !== PassengerState.COMPLETED,
+    );
+    if (!hasPassenger && this.economy.stats.passengers < 1) this.spawnTutorialPassenger();
+  }
+
   private spawnNpcs(count: number): void {
     const world = { passengers: this.spawns.passengers, taxis: this.spawns.taxis };
     for (let i = this.npcs.length; i < count; i++) {
