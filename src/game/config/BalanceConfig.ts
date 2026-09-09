@@ -69,6 +69,8 @@ export const BALANCE = {
   npcBaseSpeed: 150,
   npcReactionTime: 0.45,
   npcConvinceTime: 900,
+  /** Intervalo entre spawns de NPCs rivais durante a partida (segundos). */
+  npcSpawnInterval: 6,
 } as const;
 
 export const LEVEL_TITLES: { level: number; title: string }[] = [
@@ -84,7 +86,7 @@ export const LEVEL_TITLES: { level: number; title: string }[] = [
 
 /** Perfis de dificuldade dinâmica. */
 export const DIFFICULTY_TIERS = [
-  { name: "FACIL", maxPassengers: 10, npcCount: 3, passengerRate: 1.8, taxiRate: 6 },
-  { name: "MEDIO", maxPassengers: 8, npcCount: 6, passengerRate: 2.4, taxiRate: 7 },
-  { name: "DIFICIL", maxPassengers: 5, npcCount: 10, passengerRate: 3.2, taxiRate: 8 },
+  { name: "FACIL", maxPassengers: 10, npcCount: 3, passengerRate: 5.0, taxiRate: 8 },
+  { name: "MEDIO", maxPassengers: 8, npcCount: 6, passengerRate: 4.5, taxiRate: 9 },
+  { name: "DIFICIL", maxPassengers: 5, npcCount: 10, passengerRate: 4.0, taxiRate: 10 },
 ] as const;

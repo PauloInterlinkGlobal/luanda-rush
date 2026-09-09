@@ -31,6 +31,15 @@ export class SpawnManager {
 
   constructor(private readonly scene: Phaser.Scene) {}
 
+  /**
+   * Define os atrasos iniciais dos timers para que o spawn seja progressivo:
+   * o 2.º passageiro/táxi só aparece após um intervalo completo, não no 1.º frame.
+   */
+  setInitialDelays(passengerDelay: number, taxiDelay: number): void {
+    this.passengerTimer = passengerDelay;
+    this.taxiTimer = taxiDelay;
+  }
+
   /** Destinos actualmente servidos por táxis à espera. */
   private activeDestinations(): Destination[] {
     return this.taxis
