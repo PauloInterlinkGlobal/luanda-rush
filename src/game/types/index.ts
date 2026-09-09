@@ -134,6 +134,9 @@ export interface MatchStats {
   xp: number;
   lostPassengers: number;
   fastFill: number;
+  objectivesTotal: number;
+  objectivesCompleted: number;
+  promoted: boolean;
 }
 
 export interface SaveData {

@@ -14,7 +14,7 @@ import { EconomyManager } from "../systems/EconomyManager";
 import { MissionManager } from "../systems/MissionManager";
 import { DifficultyManager } from "../systems/DifficultyManager";
 import { PowerUpManager } from "../systems/PowerUpManager";
-import { SaveManager, levelFromXp } from "../systems/SaveManager";
+import { SaveManager } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
 import { PassengerState, PowerUpType, TaxiState, TaxiType, type SaveData } from "../types";
 
@@ -482,14 +482,17 @@ export class GameScene extends Phaser.Scene {
   private endMatch(): void {
     if (this.ended) return;
     this.ended = true;
-    const stats = { ...this.economy.stats, bestCombo: this.combo.best };
     const save = SaveManager.load();
     const missions = { ...save.missions };
     this.missions.completedIds().forEach((id) => (missions[id] = true));
-    const xp = save.xp + stats.xp;
+    const stats = {
+      ...this.economy.stats,
+      bestCombo: this.combo.best,
+      objectivesTotal: this.missions.progress.length,
+      objectivesCompleted: this.missions.progress.filter((mission) => mission.done).length,
+      promoted: this.missions.progress.length > 0 && this.missions.progress.every((mission) => mission.done),
+    };
     SaveManager.update({
-      xp,
-      level: levelFromXp(xp),
       money: save.money + stats.money,
       missions,
       bestScore: Math.max(save.bestScore, stats.money),
