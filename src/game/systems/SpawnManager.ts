@@ -109,7 +109,11 @@ export class SpawnManager {
       }
     }
 
-    // Limpeza
+    this.cleanup();
+  }
+
+  /** Remove passageiros e táxis que já saíram de cena. */
+  private cleanup(): void {
     this.passengers = this.passengers.filter((p) => {
       if (!p.active) return false;
       if (p.alpha <= 0.02 || p.state === "COMPLETED") {
