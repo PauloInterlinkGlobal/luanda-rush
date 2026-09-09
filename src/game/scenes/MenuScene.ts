@@ -102,8 +102,16 @@ export class MenuScene extends Phaser.Scene {
         16,
         HEX.gold,
       );
-      this.button(226, "JOGAR", () => this.scene.start("Game"), true);
-      this.button(292, "MISSÕES", () => this.go("MISSOES"));
+      this.button(226, save.tutorialDone ? "JOGAR" : "TUTORIAL", () => {
+        this.registry.set("tutorial", !save.tutorialDone);
+        this.scene.start("Game");
+      }, true);
+      this.button(292, save.tutorialDone ? "REPETIR TUTORIAL" : "MISSÕES", () => {
+        if (save.tutorialDone) {
+          this.registry.set("tutorial", true);
+          this.scene.start("Game");
+        } else this.go("MISSOES");
+      });
       this.button(344, "GESTÃO", () => this.go("GESTAO"));
       this.button(396, "PERSONAGEM", () => this.scene.start("Character"));
       this.button(448, "DEFINIÇÕES", () => this.go("DEFINICOES"));
