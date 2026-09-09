@@ -1,9 +1,16 @@
 import Phaser from "phaser";
 import { FONT, HEX } from "../config/GameConfig";
 import { audio } from "../systems/AudioManager";
+import {
+  TUTORIAL_STEPS,
+  TutorialStep,
+  type TutorialHudTarget,
+} from "../systems/TutorialController";
 import type { GameScene } from "./GameScene";
 
 const HUD_MARGIN = 16;
+
+type HudTargetPos = { [K in Exclude<TutorialHudTarget, null>]: { x: number; y: number; r: number } };
 
 /** HUD compacto por cima do jogo: logo, energia, objetivos, dinheiro + tempo,
  * pausa, joystick e botões de acção — colado às bordas, centro livre. */
@@ -12,8 +19,13 @@ export class HUDScene extends Phaser.Scene {
   private money!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
-  private tutorialText!: Phaser.GameObjects.Text;
   private tutorialPanel: Phaser.GameObjects.Container | undefined;
+  /** Tutorial: tooltip + destaque pulsante sobre o elemento a ensinar. */
+  private hudPos!: HudTargetPos;
+  private highlightRing!: Phaser.GameObjects.Arc;
+  private tooltipBox!: Phaser.GameObjects.Graphics;
+  private tooltipText!: Phaser.GameObjects.Text;
+  private tooltipMsg = "";
   private staminaFill!: Phaser.GameObjects.Rectangle;
   private staminaPct!: Phaser.GameObjects.Text;
   private rushText!: Phaser.GameObjects.Text;
@@ -72,7 +84,9 @@ export class HUDScene extends Phaser.Scene {
     objZone.on("pointerdown", () => {
       audio.ui();
       this.objPanel.setVisible(!this.objPanel.visible);
+      this.registry.set("objectivesOpen", this.objPanel.visible);
     });
+    this.registry.set("objectivesOpen", false);
     this.buildObjectivesPanel();
 
     // ---------------- canto superior direito: [💰 Kz | ⏱ tempo] [Ⅱ]
@@ -130,13 +144,39 @@ export class HUDScene extends Phaser.Scene {
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setVisible(false);
-    this.tutorialText = this.add
-      .text(width / 2, 4, "", { fontFamily: FONT.display, fontSize: "12px", color: HEX.yellow })
-      .setOrigin(0.5, 0)
-      .setScrollFactor(0);
+    // ---------------- tutorial: destaque pulsante + tooltip compacto
+    this.hudPos = {
+      joystick: { x: 84, y: height - 76, r: 60 },
+      call: { x: width - 52, y: height - 140, r: 42 },
+      interact: { x: width - 124, y: height - 99, r: 30 },
+      run: { x: width - 52, y: height - 58, r: 42 },
+      energy: { x: 92, y: 45, r: 42 },
+      objectives: { x: 71, y: 74, r: 44 },
+      money: { x: cardX + cardW / 2, y: cardY + cardH / 2, r: 46 },
+      timer: { x: cardX + cardW - 52, y: cardY + cardH / 2, r: 30 },
+    };
+    this.highlightRing = this.add
+      .circle(0, 0, 40, 0x000000, 0)
+      .setStrokeStyle(3, 0xffc31f, 0.95)
+      .setVisible(false)
+      .setDepth(1590);
+    this.tweens.add({
+      targets: this.highlightRing,
+      scale: 1.1,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    this.tooltipBox = this.add.graphics().setDepth(1600).setVisible(false);
+    this.tooltipText = this.add
+      .text(0, 0, "", { fontFamily: FONT.body, fontSize: "13px", color: HEX.white })
+      .setOrigin(0.5)
+      .setDepth(1601)
+      .setVisible(false);
 
     this.buildTouchControls();
-    if (this.game_.tutorialMode) this.buildTycoonTutorial(width, height);
+    if (this.game_.tutorialMode) this.buildTutorialIntro(width, height);
 
     this.registry.set("runHeld", false);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.registry.set("runHeld", false));
@@ -297,30 +337,107 @@ export class HUDScene extends Phaser.Scene {
     c.on("pointerdown", () => this.events.emit(event));
   }
 
-  private buildTycoonTutorial(width: number, height: number): void {
-    const panelWidth = Math.min(520, width - 32);
+  /** Introdução breve do tutorial — pequena, sem cobrir o gameplay. */
+  private buildTutorialIntro(width: number, height: number): void {
     const panel = this.add.container(width / 2, height / 2).setDepth(2000);
-    const backdrop = this.add.rectangle(0, 0, width, height, 0x071225, 0.78).setOrigin(0.5);
-    const card = this.add.rectangle(0, 0, panelWidth, 250, 0x16305c, 0.98).setStrokeStyle(4, 0xffc31f);
-    const roof = this.add.rectangle(0, -91, 170, 34, 0xffc31f).setStrokeStyle(3, 0x0e1a33);
-    const roofText = this.add.text(0, -91, "CENTRAL DE OPERAÇÃO", { fontFamily: FONT.display, fontSize: "16px", color: "#0e1a33" }).setOrigin(0.5);
-    const icon = this.add.circle(-panelWidth / 2 + 58, -20, 31, 0xffc31f).setStrokeStyle(3, 0x0e1a33);
-    const iconText = this.add.text(icon.x, icon.y, "1", { fontFamily: FONT.display, fontSize: "28px", color: "#0e1a33" }).setOrigin(0.5);
-    const title = this.add.text(-panelWidth / 2 + 105, -42, "PRIMEIRO TURNO", { fontFamily: FONT.display, fontSize: "25px", color: HEX.yellow }).setOrigin(0, 0.5);
-    const route = this.add.text(-panelWidth / 2 + 105, 0, "MOVER  →  APROXIMAR  →  CHAMAR", { fontFamily: FONT.display, fontSize: "17px", color: HEX.white }).setOrigin(0, 0.5);
-    const arrow = this.add.text(0, 54, "↓", { fontFamily: FONT.display, fontSize: "30px", color: HEX.yellow }).setOrigin(0.5);
-    const action = this.add.rectangle(0, 91, 250, 48, 0xffc31f).setStrokeStyle(3, 0x0e1a33).setInteractive({ useHandCursor: true });
-    const actionText = this.add.text(0, 91, "COMEÇAR TURNO", { fontFamily: FONT.display, fontSize: "22px", color: "#0e1a33" }).setOrigin(0.5);
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x071225, 0.55).setOrigin(0.5);
+    const card = this.add.rectangle(0, 0, 450, 170, 0x16305c, 0.98).setStrokeStyle(3, 0xffc31f);
+    const title = this.add
+      .text(0, -48, "BEM-VINDO AO LOTADOR!", { fontFamily: FONT.display, fontSize: "22px", color: HEX.yellow })
+      .setOrigin(0.5);
+    const line = this.add
+      .text(0, -4, "Ajuda os passageiros a entrar nos táxis e completa\nos objetivos antes do tempo acabar.", {
+        fontFamily: FONT.body,
+        fontSize: "14px",
+        color: HEX.white,
+        align: "center",
+      })
+      .setOrigin(0.5);
+    const action = this.add
+      .rectangle(0, 52, 200, 44, 0xffc31f)
+      .setStrokeStyle(3, 0x0e1a33)
+      .setInteractive({ useHandCursor: true });
+    const actionText = this.add
+      .text(0, 52, "COMEÇAR", { fontFamily: FONT.display, fontSize: "20px", color: "#0e1a33" })
+      .setOrigin(0.5);
     action.on("pointerdown", () => {
       audio.ui();
       panel.destroy();
       this.tutorialPanel = undefined;
-      this.game_.advanceTutorial("MOVER");
+      this.game_.advanceTutorial();
     });
-    panel.add([backdrop, card, roof, roofText, icon, iconText, title, route, arrow, action, actionText]);
+    panel.add([backdrop, card, title, line, action, actionText]);
     this.tutorialPanel = panel;
-    this.tweens.add({ targets: arrow, y: 62, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     this.tweens.add({ targets: action, scale: 1.05, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+  }
+
+  /** Posição do tooltip por etapa — nunca cobre o elemento destacado. */
+  private tooltipAnchor(step: TutorialStep): { x: number; y: number } | null {
+    const { width, height } = this.scale;
+    switch (step) {
+      case TutorialStep.MOVE:
+        return { x: 96, y: height - 156 };
+      case TutorialStep.CALL:
+        return { x: width - 110, y: height - 196 };
+      case TutorialStep.CONVINCE:
+        return { x: width - 170, y: height - 99 };
+      case TutorialStep.RUN:
+        return { x: width - 110, y: height - 200 };
+      case TutorialStep.OBJECTIVES:
+        return { x: 240, y: 74 };
+      case TutorialStep.FREE_PLAY:
+      case TutorialStep.FIND_PASSENGER:
+      case TutorialStep.TAKE_TO_TAXI:
+      case TutorialStep.SCORE:
+      case TutorialStep.ENERGY:
+      case TutorialStep.TIMER:
+        return { x: width / 2, y: 48 };
+      default:
+        return null;
+    }
+  }
+
+  /** Desenha o tooltip compacto (caixa arredondada + texto curto). */
+  private setTooltip(message: string | null, x: number, y: number): void {
+    if (!message) {
+      this.tooltipBox.setVisible(false);
+      this.tooltipText.setVisible(false);
+      return;
+    }
+    if (message !== this.tooltipMsg) {
+      this.tooltipText.setText(message);
+      this.tooltipMsg = message;
+    }
+    const w = this.tooltipText.width + 24;
+    const h = 30;
+    const cx = Phaser.Math.Clamp(x, w / 2 + 8, this.scale.width - w / 2 - 8);
+    const g = this.tooltipBox;
+    g.clear();
+    g.fillStyle(0x0e1a33, 0.92);
+    g.fillRoundedRect(cx - w / 2, y - h / 2, w, h, 10);
+    g.lineStyle(2, 0xffc31f, 0.8);
+    g.strokeRoundedRect(cx - w / 2, y - h / 2, w, h, 10);
+    g.setVisible(true);
+    this.tooltipText.setPosition(cx, y).setVisible(true);
+  }
+
+  /** Camada guiada: destaque + tooltip conforme a etapa actual do tutorial. */
+  private renderTutorial(): void {
+    const ctl = this.game_.tutorialCtl;
+    if (!ctl) {
+      this.highlightRing.setVisible(false);
+      this.tooltipBox.setVisible(false);
+      this.tooltipText.setVisible(false);
+      return;
+    }
+    const info = TUTORIAL_STEPS[ctl.step];
+    const target = info.hudTarget ? this.hudPos[info.hudTarget] : null;
+    this.highlightRing.setVisible(!!target);
+    if (target) this.highlightRing.setPosition(target.x, target.y).setRadius(target.r);
+
+    const anchor = this.tooltipAnchor(ctl.step);
+    const hiddenHint = ctl.step === TutorialStep.FREE_PLAY && !ctl.showHint;
+    this.setTooltip(anchor && !hiddenHint ? info.message : null, anchor?.x ?? 0, anchor?.y ?? 0);
   }
 
   override update(): void {
@@ -331,7 +448,7 @@ export class HUDScene extends Phaser.Scene {
     this.timer.setText(`⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
     this.timer.setColor(s <= 20 ? HEX.red : HEX.white);
     this.comboText.setText(`COMBO x${g.combo.level}`).setVisible(g.combo.level > 1);
-    this.tutorialText.setText(g.tutorialMode ? `TUTORIAL · ${g.tutorialStep}` : "");
+    this.renderTutorial();
 
     const ratio = Phaser.Math.Clamp(g.player.stamina / g.player.maxStamina, 0, 1);
     this.staminaFill.width = 82 * ratio;
