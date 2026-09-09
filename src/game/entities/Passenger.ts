@@ -17,6 +17,8 @@ export class Passenger extends Character {
   override state: PassengerState = PassengerState.SPAWNING;
   patience: number;
   value: number;
+  /** Tutorial: nunca perde a paciência nem desiste sozinho. */
+  frozenPatience = false;
 
   /** Quem reclamou este passageiro (jogador ou NPC). */
   claimedBy: Phaser.GameObjects.GameObject | null = null;
