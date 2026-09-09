@@ -96,6 +96,18 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
 
     this.spawns = new SpawnManager(this);
+    // Colisão física entre entidades móveis e táxis — ninguém atravessa carros.
+    this.physics.add.collider(this.player, this.spawns.taxiGroup);
+    this.physics.add.collider(
+      this.spawns.passengerGroup,
+      this.spawns.taxiGroup,
+      undefined,
+      (pObj: any, _tObj: any) => {
+        // Passageiros em FOLLOWING/BOARDING atravessam o táxi para embarcar.
+        const p = pObj as Passenger;
+        return p.state !== PassengerState.FOLLOWING && p.state !== PassengerState.BOARDING;
+      },
+    );
     this.difficulty = new DifficultyManager(this.save.level);
     this.missions = new MissionManager({}, this.tutorialMode ? TUTORIAL_MISSIONS : MISSIONS);
     this.missions.onComplete = (m) => {
@@ -166,6 +178,7 @@ export class GameScene extends Phaser.Scene {
       const key = keys[(i + Phaser.Math.Between(0, keys.length - 1)) % keys.length]!;
       const ped = new Pedestrian(this, spot.x, spot.y, key);
       this.physics.add.collider(ped, this.obstacles);
+      this.physics.add.collider(ped, this.spawns.taxiGroup);
       this.pedestrians.push(ped);
     });
   }
@@ -203,6 +216,7 @@ export class GameScene extends Phaser.Scene {
       const npc = new LotadorNPC(this, spot.x, spot.y, sheet, world);
       npc.on("npc-board", (p: Passenger, taxi: Taxi) => this.npcBoard(p, taxi));
       this.physics.add.collider(npc, this.obstacles);
+      this.physics.add.collider(npc, this.spawns.taxiGroup);
       this.npcs.push(npc);
     }
   }
