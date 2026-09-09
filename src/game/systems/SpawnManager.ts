@@ -36,13 +36,16 @@ export class SpawnManager {
       .map((t) => t.destination);
   }
 
-  spawnPassenger(forceDestination?: Destination): Passenger | null {
+  spawnPassenger(
+    forceDestination?: Destination,
+    at?: { x: number; y: number },
+  ): Passenger | null {
     const zone =
       MAP_CONFIG.passengerSpawnZones[
         Math.floor(Math.random() * MAP_CONFIG.passengerSpawnZones.length)
       ]!;
-    const x = zone.x + Math.random() * zone.w;
-    const y = zone.y + Math.random() * zone.h;
+    const x = at ? at.x : zone.x + Math.random() * zone.w;
+    const y = at ? at.y : zone.y + Math.random() * zone.h;
     const type = weightedPick(PASSENGER_WEIGHTS) as PassengerType;
 
     // 70% dos passageiros querem um destino que já tem táxi — mantém o ritmo
