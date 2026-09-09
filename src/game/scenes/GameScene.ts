@@ -431,9 +431,11 @@ export class GameScene extends Phaser.Scene {
       d.current.passengerRate,
       d.current.taxiRate,
       this.isRush,
-      Math.min(6, 2 + this.save.fleetLevel),
+      this.tutorialMode ? 1 : Math.min(6, 2 + this.save.fleetLevel),
     );
-    if (!this.tutorialMode) {
+    if (this.tutorialMode) {
+      this.ensureTutorialWorld();
+    } else {
       this.spawnNpcs(Math.min(d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
     }
 
