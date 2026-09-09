@@ -82,6 +82,8 @@ export class GameScene extends Phaser.Scene {
     this.player.on("footstep", () => audio.step());
     this.physics.add.collider(this.player, this.obstacles);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    // Referência para o HUD (visibilidade dos nomes dos NPCs quando próximos).
+    this.registry.set("player", this.player);
 
     this.callRing = this.add
       .circle(this.player.x, this.player.y, BALANCE.callRadius, 0xffc31f, 0.12)
@@ -389,7 +391,7 @@ export class GameScene extends Phaser.Scene {
       if (k["W"]?.isDown || k["UP"]?.isDown) dy -= 1;
       if (k["S"]?.isDown || k["DOWN"]?.isDown) dy += 1;
     }
-    const run = j.run || Boolean(k?.["SHIFT"]?.isDown);
+    const run = j.run || this.registry.get("runHeld") === true || Boolean(k?.["SHIFT"]?.isDown);
     this.player.move(Phaser.Math.Clamp(dx, -1, 1), Phaser.Math.Clamp(dy, -1, 1), run, delta);
     if (this.tutorialMode && !this.tutorialTimerStarted && (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1)) {
       this.tutorialTimerStarted = true;

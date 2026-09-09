@@ -50,6 +50,10 @@ export class LotadorNPC extends Character {
     const vy = body?.velocity.y ?? 0;
     this.updateAnimation(vx, vy, Math.hypot(vx, vy) > BALANCE.npcBaseSpeed * 1.05, false, delta);
     this.refreshDepth();
+    // Nome visível apenas quando o jogador está próximo — sem texto permanente no mapa.
+    const player = this.scene.registry.get("player") as Phaser.GameObjects.Sprite | undefined;
+    const near = !!player && Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) < 150;
+    this.tag.setVisible(near);
     this.tag.setPosition(this.x, this.y - 44);
   }
 
