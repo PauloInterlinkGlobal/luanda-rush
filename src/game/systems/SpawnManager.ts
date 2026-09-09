@@ -26,6 +26,8 @@ export class SpawnManager {
 
   private passengerTimer = 0;
   private taxiTimer = 1.2;
+  /** No tutorial (nível 1) desliga-se: nada nasce sem ser pedido pela cena. */
+  autoSpawn = true;
 
   constructor(private readonly scene: Phaser.Scene) {}
 
