@@ -6,13 +6,17 @@ import type { MatchStats } from "../types";
 /** Ecrã de resultado do turno. */
 export class ResultScene extends Phaser.Scene {
   private stats!: MatchStats;
+  private won: boolean | null = null;
+  private tutorial = false;
 
   constructor() {
     super("Result");
   }
 
-  init(data: { stats: MatchStats }): void {
+  init(data: { stats: MatchStats; won?: boolean | null; tutorial?: boolean }): void {
     this.stats = data.stats;
+    this.won = data.won ?? null;
+    this.tutorial = data.tutorial === true;
   }
 
   create(): void {
@@ -28,20 +32,42 @@ export class ResultScene extends Phaser.Scene {
     }
     this.add.rectangle(0, 0, width, height, 0x0e1a33).setOrigin(0);
 
+    const title = this.tutorial
+      ? this.won
+        ? "TUTORIAL CONCLUÍDO!"
+        : "TEMPO ESGOTADO"
+      : promoted
+        ? "PROMOÇÃO DESBLOQUEADA"
+        : "FIM DO TURNO";
     this.add
-      .text(width / 2, 70, promoted ? "PROMOÇÃO DESBLOQUEADA" : "FIM DO TURNO", {
+      .text(width / 2, 70, title, {
         fontFamily: "Impact, 'Arial Black', sans-serif",
-        fontSize: "54px",
+        fontSize: this.tutorial ? "46px" : "54px",
         color: HEX.yellow,
       })
       .setOrigin(0.5);
 
-    if (promoted) {
+    if (this.tutorial) {
+      this.add
+        .text(
+          width / 2,
+          118,
+          this.won ? "Já sabes o básico para trabalhar como lotador." : "Não completaste todos os objetivos.",
+          {
+            fontFamily: "'Trebuchet MS', sans-serif",
+            fontSize: "18px",
+            color: this.won ? HEX.gold : HEX.red,
+          },
+        )
+        .setOrigin(0.5);
+    } else if (promoted) {
       this.add.text(width / 2, 118, "TODOS OS OBJETIVOS CONCLUÍDOS", {
         fontFamily: "Impact, 'Arial Black', sans-serif",
         fontSize: "24px",
         color: HEX.gold,
       }).setOrigin(0.5);
+    }
+    if (promoted || (this.tutorial && this.won)) {
       this.createConfetti();
       this.tweens.add({ targets: this.children.list, alpha: { from: 0.78, to: 1 }, duration: 500, yoyo: true, repeat: 2 });
     }
@@ -66,8 +92,16 @@ export class ResultScene extends Phaser.Scene {
         .setOrigin(0.5);
     });
 
-    this.btn(height - 120, "JOGAR OUTRA VEZ", () => this.scene.start("Game"));
-    this.btn(height - 60, "MENU", () => this.scene.start("Menu"));
+    this.btn(
+      height - 120,
+      this.tutorial && !this.won ? "TENTAR NOVAMENTE" : "JOGAR OUTRA VEZ",
+      () => this.scene.start("Game"),
+    );
+    this.btn(
+      height - 60,
+      this.tutorial ? (this.won ? "CONTINUAR" : "VOLTAR") : "MENU",
+      () => this.scene.start("Menu"),
+    );
   }
 
   private createConfetti(): void {

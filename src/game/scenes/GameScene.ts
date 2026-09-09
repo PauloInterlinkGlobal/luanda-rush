@@ -12,6 +12,8 @@ import { SpawnManager } from "../systems/SpawnManager";
 import { ComboManager } from "../systems/ComboManager";
 import { EconomyManager } from "../systems/EconomyManager";
 import { MissionManager } from "../systems/MissionManager";
+import { MISSIONS, TUTORIAL_MISSIONS } from "../data/missions";
+import { TutorialController } from "../systems/TutorialController";
 import { DifficultyManager } from "../systems/DifficultyManager";
 import { PowerUpManager } from "../systems/PowerUpManager";
 import { SaveManager } from "../systems/SaveManager";
@@ -33,7 +35,7 @@ export class GameScene extends Phaser.Scene {
   difficulty!: DifficultyManager;
   powerUps = new PowerUpManager();
 
-  timeLeft = BALANCE.matchDuration;
+  timeLeft: number = BALANCE.matchDuration;
   rushUntil = 0;
   private rushTimer = 12;
   private paused = false;
@@ -41,7 +43,9 @@ export class GameScene extends Phaser.Scene {
   readonly tutorial = false;
   tutorialMode = false;
   private tutorialTimerStarted = false;
-  tutorialStep = "MOVER";
+  /** Camada guiada do nível 1 — null fora do tutorial. */
+  tutorialCtl: TutorialController | null = null;
+  private wasRunning = false;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private obstacles!: Phaser.Physics.Arcade.StaticGroup;
   private callRing!: Phaser.GameObjects.Arc;
@@ -53,11 +57,11 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.ended = false;
     this.paused = false;
-    this.timeLeft = BALANCE.matchDuration;
     this.tutorialMode = this.registry.get("tutorial") === true;
+    this.timeLeft = this.tutorialMode ? BALANCE.tutorialMatchDuration : BALANCE.matchDuration;
     this.paused = this.tutorialMode;
     this.tutorialTimerStarted = false;
-    this.tutorialStep = "MOVER";
+    this.wasRunning = false;
     this.combo.reset();
     this.economy.reset();
     this.powerUps.reset();
@@ -82,6 +86,8 @@ export class GameScene extends Phaser.Scene {
     this.player.on("footstep", () => audio.step());
     this.physics.add.collider(this.player, this.obstacles);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    // Referência para o HUD (visibilidade dos nomes dos NPCs quando próximos).
+    this.registry.set("player", this.player);
 
     this.callRing = this.add
       .circle(this.player.x, this.player.y, BALANCE.callRadius, 0xffc31f, 0.12)
@@ -90,7 +96,7 @@ export class GameScene extends Phaser.Scene {
 
     this.spawns = new SpawnManager(this);
     this.difficulty = new DifficultyManager(this.save.level);
-    this.missions = new MissionManager({});
+    this.missions = new MissionManager({}, this.tutorialMode ? TUTORIAL_MISSIONS : MISSIONS);
     this.missions.onComplete = (m) => {
       this.floatText(this.player.x, this.player.y - 70, `MISSÃO: ${m.label}`, HEX.gold);
       audio.reward();
@@ -99,8 +105,14 @@ export class GameScene extends Phaser.Scene {
     if (!this.tutorialMode) this.spawnNpcs(this.difficulty.current.npcCount);
     this.spawnPedestrians();
     this.spawns.spawnTaxi(TaxiType.NORMAL);
-    for (let i = 0; i < (this.tutorialMode ? 1 : 4 + this.save.stationLevel * 2); i++) {
-      this.spawns.spawnPassenger();
+    if (this.tutorialMode) {
+      // Passageiro inicial com destino servido pelo táxi do tutorial (sistema real).
+      this.spawns.spawnPassenger(this.spawns.taxis[0]?.destination);
+      this.tutorialCtl = new TutorialController(this);
+    } else {
+      for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) {
+        this.spawns.spawnPassenger();
+      }
     }
 
     this.setupInput();
@@ -276,7 +288,10 @@ export class GameScene extends Phaser.Scene {
       const angle = Math.atan2(this.player.y - p.y, this.player.x - p.x);
       p.setVelocity(Math.cos(angle) * p.def.speed, Math.sin(angle) * p.def.speed);
     }
-    if (touched > 0) this.floatText(this.player.x, this.player.y - 60, `${touched} OUVIRAM!`, HEX.yellow);
+    if (touched > 0) {
+      this.economy.registerCall();
+      this.floatText(this.player.x, this.player.y - 60, `${touched} OUVIRAM!`, HEX.yellow);
+    }
   }
 
   private usePowerUp(): void {
@@ -373,8 +388,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.tutorialMode || this.tutorialTimerStarted) {
       this.timeLeft -= dt;
     }
-    if (!this.tutorialMode && this.timeLeft <= 0) {
-      this.endMatch();
+    if (this.timeLeft <= 0) {
+      this.endMatch(this.tutorialMode ? false : undefined);
       return;
     }
 
@@ -389,21 +404,19 @@ export class GameScene extends Phaser.Scene {
       if (k["W"]?.isDown || k["UP"]?.isDown) dy -= 1;
       if (k["S"]?.isDown || k["DOWN"]?.isDown) dy += 1;
     }
-    const run = j.run || Boolean(k?.["SHIFT"]?.isDown);
+    const run = j.run || this.registry.get("runHeld") === true || Boolean(k?.["SHIFT"]?.isDown);
     this.player.move(Phaser.Math.Clamp(dx, -1, 1), Phaser.Math.Clamp(dy, -1, 1), run, delta);
     if (this.tutorialMode && !this.tutorialTimerStarted && (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1)) {
       this.tutorialTimerStarted = true;
-      this.tutorialStep = "ENCONTRAR PASSAGEIRO";
     }
+    if (this.player.isRunning && !this.wasRunning) this.economy.registerRun();
+    this.wasRunning = this.player.isRunning;
 
     // Sistemas
     const d = this.difficulty;
     d.tick(delta);
     this.combo.tick(delta);
     this.powerUps.tick(this.time.now);
-    if (this.tutorialMode) {
-      this.updateTutorialState(dx, dy);
-    }
     this.spawns.tick(
       delta,
       this.tutorialMode ? 1 : d.current.maxPassengers,
@@ -418,10 +431,13 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.isRush) {
       this.economy.rewardMultiplier = 1;
-      this.rushTimer -= dt;
-      if (this.rushTimer <= 0) {
-        this.rushTimer = 30;
-        if (Math.random() < BALANCE.rushHourChance) this.startRush();
+      // No tutorial não há hora de ponta — o nível 1 mantém-se calmo.
+      if (!this.tutorialMode) {
+        this.rushTimer -= dt;
+        if (this.rushTimer <= 0) {
+          this.rushTimer = 30;
+          if (Math.random() < BALANCE.rushHourChance) this.startRush();
+        }
       }
     }
 
@@ -462,34 +478,24 @@ export class GameScene extends Phaser.Scene {
     this.pedestrians.forEach((p) => p.tick(delta));
 
     this.missions.evaluate(this.economy.stats, this.combo.level);
+    this.tutorialCtl?.tick(delta);
+    // Vitória do tutorial: todos os objetivos do nível concluídos.
+    if (this.tutorialMode && this.missions.progress.length > 0 && this.missions.progress.every((m) => m.done)) {
+      this.endMatch(true);
+      return;
+    }
     this.callRing.setPosition(this.player.x, this.player.y);
   }
 
-  advanceTutorial(action: "MOVER" | "CHAMAR"): void {
+  /** Botão COMEÇAR do painel de introdução — inicia a etapa MOVER. */
+  advanceTutorial(): void {
     if (!this.tutorialMode) return;
-    if (action === "MOVER" && this.tutorialStep === "MOVER") {
-      this.paused = false;
-      this.tutorialStep = "ENCONTRAR PASSAGEIRO";
-      this.events.emit("paused", false);
-    }
+    this.paused = false;
+    this.tutorialCtl?.begin();
+    this.events.emit("paused", false);
   }
 
-  private updateTutorialState(dx: number, dy: number): void {
-    if (!this.tutorialMode) return;
-    const passenger = this.spawns.passengers[0];
-    if (!passenger) return;
-    if (this.tutorialStep === "ENCONTRAR PASSAGEIRO" && Phaser.Math.Distance.Between(this.player.x, this.player.y, passenger.x, passenger.y) < BALANCE.interactRadius * 1.4) {
-      this.tutorialStep = "CHAMAR / INTERAGIR";
-    }
-    if (passenger.state === PassengerState.FOLLOWING) this.tutorialStep = "LEVAR AO TÁXI";
-    if (passenger.state === PassengerState.COMPLETED) this.tutorialStep = "GANHOU";
-    if (this.tutorialStep === "GANHOU") {
-      SaveManager.update({ tutorialDone: true });
-      this.endMatch();
-    }
-  }
-
-  private endMatch(): void {
+  private endMatch(won?: boolean): void {
     if (this.ended) return;
     this.ended = true;
     const save = SaveManager.load();
@@ -502,12 +508,14 @@ export class GameScene extends Phaser.Scene {
       objectivesCompleted: this.missions.progress.filter((mission) => mission.done).length,
       promoted: this.missions.progress.length > 0 && this.missions.progress.every((mission) => mission.done),
     };
-    SaveManager.update({
+    const patch: Partial<SaveData> = {
       money: save.money + stats.money,
       missions,
       bestScore: Math.max(save.bestScore, stats.money),
-    });
+    };
+    if (this.tutorialMode && won === true) patch.tutorialDone = true;
+    SaveManager.update(patch);
     this.scene.stop("HUD");
-    this.scene.start("Result", { stats });
+    this.scene.start("Result", { stats, won: won ?? null, tutorial: this.tutorialMode });
   }
 }
