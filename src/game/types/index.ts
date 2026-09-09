@@ -146,6 +146,8 @@ export interface SaveData {
   playerName: string;
   missions: Record<string, boolean>;
   bestScore: number;
+  fleetLevel: number;
+  stationLevel: number;
   unlockedMaps: string[];
   settings: GameSettings;
 }

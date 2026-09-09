@@ -91,7 +91,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnNpcs(this.difficulty.current.npcCount);
     this.spawnPedestrians();
     this.spawns.spawnTaxi(TaxiType.NORMAL);
-    for (let i = 0; i < 5; i++) this.spawns.spawnPassenger();
+    for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) this.spawns.spawnPassenger();
 
     this.setupInput();
     this.events.on("taxi-arrived", () => audio.horn());
@@ -391,6 +391,7 @@ export class GameScene extends Phaser.Scene {
       d.current.passengerRate,
       d.current.taxiRate,
       this.isRush,
+      Math.min(6, 2 + this.save.fleetLevel),
     );
     this.spawnNpcs(Math.min(d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
 

@@ -16,6 +16,8 @@ function defaults(): SaveData {
     playerName: "Lotador",
     missions: {},
     bestScore: 0,
+    fleetLevel: 1,
+    stationLevel: 1,
     unlockedMaps: ["bairro"],
     settings: {
       music: true,

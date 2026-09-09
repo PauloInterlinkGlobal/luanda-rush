@@ -78,6 +78,7 @@ export class SpawnManager {
     passengerRate: number,
     taxiRate: number,
     rush: boolean,
+    maxTaxis = 3,
   ): void {
     const dt = delta / 1000;
     const rushFactor = rush ? 0.55 : 1;
@@ -92,7 +93,9 @@ export class SpawnManager {
     this.taxiTimer -= dt;
     if (this.taxiTimer <= 0) {
       this.taxiTimer = taxiRate * rushFactor;
-      this.spawnTaxi();
+      if (this.taxis.filter((t) => t.active && t.state !== TaxiState.GONE).length < maxTaxis) {
+        this.spawnTaxi();
+      }
     }
 
     // Limpeza
