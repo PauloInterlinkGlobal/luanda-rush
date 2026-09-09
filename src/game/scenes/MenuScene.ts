@@ -2,10 +2,10 @@ import Phaser from "phaser";
 import { HEX } from "../config/GameConfig";
 import { SaveManager, levelTitle } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
-import { MISSIONS } from "../data/missions";
+import { MISSIONS, UPGRADES } from "../data/missions";
 import { MAP_CONFIG } from "../config/MapConfig";
 
-type Panel = "MENU" | "MISSOES" | "DEFINICOES" | "SAIDA";
+type Panel = "MENU" | "MISSOES" | "GESTAO" | "DEFINICOES" | "SAIDA";
 
 /** Menu principal: jogar, missões, personagem e definições. */
 export class MenuScene extends Phaser.Scene {
@@ -102,11 +102,20 @@ export class MenuScene extends Phaser.Scene {
         16,
         HEX.gold,
       );
-      this.button(226, "JOGAR", () => this.scene.start("Game"), true);
-      this.button(292, "MISSÕES", () => this.go("MISSOES"));
-      this.button(344, "PERSONAGEM", () => this.scene.start("Character"));
-      this.button(396, "DEFINIÇÕES", () => this.go("DEFINICOES"));
-      this.button(448, "SAIR DO JOGO", () => this.go("SAIDA"));
+      this.button(226, save.tutorialDone ? "JOGAR" : "TUTORIAL", () => {
+        this.registry.set("tutorial", !save.tutorialDone);
+        this.scene.start("Game");
+      }, true);
+      this.button(292, save.tutorialDone ? "REPETIR TUTORIAL" : "MISSÕES", () => {
+        if (save.tutorialDone) {
+          this.registry.set("tutorial", true);
+          this.scene.start("Game");
+        } else this.go("MISSOES");
+      });
+      this.button(344, "GESTÃO", () => this.go("GESTAO"));
+      this.button(396, "PERSONAGEM", () => this.scene.start("Character"));
+      this.button(448, "DEFINIÇÕES", () => this.go("DEFINICOES"));
+      this.button(500, "SAIR DO JOGO", () => this.go("SAIDA"));
       this.label(width / 2, height - 26, "WASD mover · SHIFT correr · E interagir · ESPAÇO chamar · Q power-up", 13, HEX.muted);
       return;
     }
@@ -122,6 +131,34 @@ export class MenuScene extends Phaser.Scene {
         const done = save.missions[m.id] === true;
         this.label(width / 2 - 280, 230 + i * 42, `${done ? "✔" : "•"} ${m.label}`, 17, done ? HEX.green : HEX.white, 0);
         this.label(width / 2 - 280, 252 + i * 42, `${m.description} — ${m.rewardMoney} Kz / ${m.rewardXp} XP`, 13, HEX.muted, 0);
+      });
+    }
+
+    if (this.panel === "GESTAO") {
+      this.label(width / 2, 164, "GESTÃO DA OPERAÇÃO", 26, HEX.yellow);
+      this.label(width / 2, 194, `CAIXA ${save.money} Kz · FROTA NÍVEL ${save.fleetLevel} · PARAGEM NÍVEL ${save.stationLevel}`, 14, HEX.muted);
+      UPGRADES.forEach((upgrade, i) => {
+        const level = save.upgrades[upgrade.id] ?? 0;
+        const cost = upgrade.baseCost * (level + 1);
+        const y = 236 + i * 48;
+        this.label(width / 2 - 270, y, `${upgrade.label} ${level}/${upgrade.maxLevel}`, 16, HEX.white, 0);
+        this.button(y, level >= upgrade.maxLevel ? "MAX" : `${cost} Kz`, () => {
+          if (level >= upgrade.maxLevel || save.money < cost) return;
+          SaveManager.update({ money: save.money - cost, upgrades: { ...save.upgrades, [upgrade.id]: level + 1 } });
+          this.render();
+        });
+      });
+      this.button(442, save.fleetLevel >= 3 ? "FROTA MAX" : `FROTA ${save.fleetLevel + 1} · ${1200 * save.fleetLevel} Kz`, () => {
+        const cost = 1200 * save.fleetLevel;
+        if (save.fleetLevel >= 3 || save.money < cost) return;
+        SaveManager.update({ money: save.money - cost, fleetLevel: save.fleetLevel + 1 });
+        this.render();
+      });
+      this.button(498, save.stationLevel >= 3 ? "PARAGEM MAX" : `PARAGEM ${save.stationLevel + 1} · ${1800 * save.stationLevel} Kz`, () => {
+        const cost = 1800 * save.stationLevel;
+        if (save.stationLevel >= 3 || save.money < cost) return;
+        SaveManager.update({ money: save.money - cost, stationLevel: save.stationLevel + 1 });
+        this.render();
       });
     }
 

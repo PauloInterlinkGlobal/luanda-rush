@@ -13,6 +13,17 @@ export const PEOPLE_KEY = "npcs_people";
 const PROP_RECTS = PROPS.frames as Record<string, Rect>;
 const PEOPLE_RECTS = PEOPLE.frames as Record<string, Rect>;
 
+const SHIRT_COLORS = ["#e23b3b", "#2b5fae", "#36b45a", "#ffc31f", "#f28c28", "#8b5cf6", "#f4f1ea", "#0e1a33"];
+
+function tintShirt(ctx: CanvasRenderingContext2D, width: number, height: number, shirt: number): void {
+  ctx.save();
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = SHIRT_COLORS[shirt % SHIRT_COLORS.length] ?? SHIRT_COLORS[0];
+  ctx.globalAlpha = 0.72;
+  ctx.fillRect(0, Math.round(height * 0.28), width, Math.round(height * 0.42));
+  ctx.restore();
+}
+
 /** Altura desejada (px) de cada objecto de rua no mapa. */
 export const PROP_HEIGHT: Record<string, number> = {
   prop_bench: 62,

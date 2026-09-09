@@ -11,6 +11,8 @@ export class HUDScene extends Phaser.Scene {
   private timer!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
+  private flowText!: Phaser.GameObjects.Text;
+  private tutorialText!: Phaser.GameObjects.Text;
   private staminaBar!: Phaser.GameObjects.Rectangle;
   private rushText!: Phaser.GameObjects.Text;
   private isPaused = false;
@@ -32,6 +34,8 @@ export class HUDScene extends Phaser.Scene {
     this.timer = this.text(width / 2, 16, "3:00", 24, HEX.white, 0.5);
     this.comboText = this.text(width - 16, 16, "COMBO x1", 20, HEX.yellow, 1);
     this.levelText = this.text(16, 62, `NÍVEL ${save.level} · ${levelTitle(save.level)}`, 13, HEX.muted, 0);
+    this.flowText = this.text(width / 2, 88, "PASSAGEIROS 0 · PERDIDOS 0", 12, HEX.muted, 0.5);
+    this.tutorialText = this.text(width / 2, 118, "", 22, HEX.yellow, 0.5);
 
     this.add.rectangle(16, 84, 160, 10, 0x000000, 0.5).setOrigin(0, 0.5);
     this.staminaBar = this.add.rectangle(16, 84, 160, 10, 0x36b45a).setOrigin(0, 0.5);
@@ -87,29 +91,33 @@ export class HUDScene extends Phaser.Scene {
 
   private buildTouchControls(): void {
     const { width, height } = this.scale;
-    this.stickBase = this.add.circle(110, height - 100, 62, 0xffffff, 0.14);
-    this.stickThumb = this.add.circle(110, height - 100, 28, 0xffc31f, 0.6);
+    // O controle é ancorado no HUD: nunca segue o toque nem pode ser arrastado.
+    const stickX = 110;
+    const stickY = height - 100;
+    const stickRadius = 62;
+    this.stickBase = this.add.circle(stickX, stickY, stickRadius, 0xffffff, 0.14).setScrollFactor(0);
+    this.stickThumb = this.add.circle(stickX, stickY, 28, 0xffc31f, 0.6).setScrollFactor(0);
 
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      if (p.x < width / 2 && this.stickId === -1) {
+      const distance = Phaser.Math.Distance.Between(p.x, p.y, stickX, stickY);
+      if (p.x < width / 2 && distance <= stickRadius && this.stickId === -1) {
         this.stickId = p.id;
-        this.stickBase.setPosition(p.x, p.y);
-        this.stickThumb.setPosition(p.x, p.y);
+        this.stickThumb.setPosition(stickX, stickY);
       }
     });
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (p.id !== this.stickId) return;
-      const dx = p.x - this.stickBase.x;
-      const dy = p.y - this.stickBase.y;
-      const len = Math.min(62, Math.hypot(dx, dy));
+      const dx = p.x - stickX;
+      const dy = p.y - stickY;
+      const len = Math.min(stickRadius, Math.hypot(dx, dy));
       const a = Math.atan2(dy, dx);
       this.stickThumb.setPosition(
-        this.stickBase.x + Math.cos(a) * len,
-        this.stickBase.y + Math.sin(a) * len,
+        stickX + Math.cos(a) * len,
+        stickY + Math.sin(a) * len,
       );
       this.registry.set("joystick", {
-        x: (Math.cos(a) * len) / 62,
-        y: (Math.sin(a) * len) / 62,
+        x: (Math.cos(a) * len) / stickRadius,
+        y: (Math.sin(a) * len) / stickRadius,
         run: len > 52,
       });
     });
@@ -126,6 +134,8 @@ export class HUDScene extends Phaser.Scene {
     this.button(width - 168, height - 62, "!", "hud-call");
     this.button(width - 84, height - 168, "Q", "hud-power");
     this.button(width - 40, 84, "II", "hud-pause", 22);
+
+    [this.stickBase, this.stickThumb].forEach((control) => control.setDepth(1000));
   }
 
   override update(): void {
@@ -137,6 +147,10 @@ export class HUDScene extends Phaser.Scene {
     this.timer.setColor(s <= 20 ? HEX.red : HEX.white);
     this.comboText.setText(`COMBO x${g.combo.level}`);
     this.comboText.setScale(g.combo.level > 1 ? 1.08 : 1);
+    this.flowText.setText(
+      `PASSAGEIROS ${g.economy.stats.passengers} · PERDIDOS ${g.economy.stats.lostPassengers}`,
+    );
+    this.tutorialText.setText(g.tutorialMode ? `TUTORIAL · ${g.tutorialStep}` : "");
     this.staminaBar.width = 160 * (g.player.stamina / g.player.maxStamina);
     this.staminaBar.fillColor = g.player.tired ? 0xe23b3b : 0x36b45a;
     this.rushText.setVisible(g.isRush);
