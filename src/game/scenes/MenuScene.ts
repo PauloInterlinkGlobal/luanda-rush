@@ -117,6 +117,7 @@ export class MenuScene extends Phaser.Scene {
       this.button(448, "DEFINIÇÕES", () => this.go("DEFINICOES"));
       this.button(500, "SAIR DO JOGO", () => this.go("SAIDA"));
       this.label(width / 2, height - 26, "WASD mover · SHIFT correr · E interagir · ESPAÇO chamar · Q power-up", 13, HEX.muted);
+      this.buildControlGuide(width, height);
       return;
     }
 
@@ -194,6 +195,68 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /** Fecha a sessão: pára tudo e mostra o ecrã de despedida. */
+  private buildControlGuide(width: number, height: number): void {
+    const compact = width < 820;
+    const x = compact ? width / 2 : width - 176;
+    const y = compact ? height - 92 : 278;
+    const guideWidth = compact ? Math.min(width - 32, 620) : 300;
+    const guideHeight = compact ? 70 : 250;
+    const panel = this.add
+      .rectangle(x, y, guideWidth, guideHeight, 0x16305c, 0.94)
+      .setStrokeStyle(2, 0x2b5fae);
+    this.layer.add(panel);
+
+    const title = this.add
+      .text(x, y - guideHeight / 2 + 22, "COMO JOGAR", {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: "20px",
+        color: HEX.yellow,
+      })
+      .setOrigin(0.5);
+    this.layer.add(title);
+
+    if (compact) {
+      const steps = this.add.text(x, y + 8, "1  MOVER  →  2  APROXIMAR  →  3  ESPAÇO PARA CHAMAR", {
+        fontFamily: "'Trebuchet MS', sans-serif",
+        fontSize: "12px",
+        color: HEX.white,
+      }).setOrigin(0.5);
+      this.layer.add(steps);
+      this.animateCallHint(x + guideWidth / 2 - 24, y + 26);
+      return;
+    }
+
+    const steps = [
+      ["1", "MOVER", "WASD ou joystick", HEX.yellow],
+      ["2", "APROXIMAR", "Chega perto do passageiro", HEX.white],
+      ["3", "CHAMAR", "Pressiona ESPAÇO", HEX.gold],
+    ] as const;
+    steps.forEach(([number, label, copy], index) => {
+      const rowY = y - 66 + index * 54;
+      const marker = this.add.circle(x - 126, rowY, 15, index === 2 ? 0xffc31f : 0x2b5fae).setStrokeStyle(2, 0x0e1a33);
+      const numberText = this.add.text(x - 126, rowY, number, { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "16px", color: "#0e1a33" }).setOrigin(0.5);
+      const labelText = this.add.text(x - 98, rowY - 9, label, { fontFamily: "Impact, 'Arial Black', sans-serif", fontSize: "15px", color: index === 2 ? HEX.yellow : HEX.white }).setOrigin(0, 0.5);
+      const copyText = this.add.text(x - 98, rowY + 11, copy, { fontFamily: "'Trebuchet MS', sans-serif", fontSize: "11px", color: HEX.muted }).setOrigin(0, 0.5);
+      this.layer.add([marker, numberText, labelText, copyText]);
+    });
+    this.animateCallHint(x + 100, y + 84);
+  }
+
+  private animateCallHint(x: number, y: number): void {
+    const button = this.add
+      .circle(x, y, 22, 0xffc31f, 0.95)
+      .setStrokeStyle(3, 0x0e1a33);
+    const text = this.add.text(x, y, "ESPAÇO", {
+      fontFamily: "Impact, 'Arial Black', sans-serif",
+      fontSize: "9px",
+      color: "#0e1a33",
+    }).setOrigin(0.5);
+    const ring = this.add.circle(x, y, 28, 0xffc31f, 0).setStrokeStyle(2, 0xffc31f, 0.8);
+    this.layer.add([ring, button, text]);
+    this.tweens.add({ targets: [button, text], scale: 1.1, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: ring, scale: 1.55, alpha: 0, duration: 1000, repeat: -1, ease: "Quad.easeOut" });
+  }
+
   private quitGame(): void {
     const { width, height } = this.scale;
     this.children.removeAll(true);
