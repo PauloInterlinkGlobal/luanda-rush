@@ -129,9 +129,10 @@ export class Passenger extends Character {
     const dt = delta / 1000;
 
     if (
-      this.state === PassengerState.WAITING ||
-      this.state === PassengerState.SEARCHING ||
-      this.state === PassengerState.APPROACHED
+      !this.frozenPatience &&
+      (this.state === PassengerState.WAITING ||
+        this.state === PassengerState.SEARCHING ||
+        this.state === PassengerState.APPROACHED)
     ) {
       this.patience -= dt;
       if (this.patience <= 0) this.giveUp();
