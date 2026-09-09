@@ -18,7 +18,7 @@ const SHIRT_COLORS = ["#e23b3b", "#2b5fae", "#36b45a", "#ffc31f", "#f28c28", "#8
 function tintShirt(ctx: CanvasRenderingContext2D, width: number, height: number, shirt: number): void {
   ctx.save();
   ctx.globalCompositeOperation = "source-atop";
-  ctx.fillStyle = SHIRT_COLORS[shirt % SHIRT_COLORS.length] ?? SHIRT_COLORS[0];
+  ctx.fillStyle = SHIRT_COLORS[shirt % SHIRT_COLORS.length] ?? "#e23b3b";
   ctx.globalAlpha = 0.72;
   ctx.fillRect(0, Math.round(height * 0.28), width, Math.round(height * 0.42));
   ctx.restore();
