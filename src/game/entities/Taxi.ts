@@ -156,6 +156,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
       }
       case TaxiState.WAITING:
       case TaxiState.LOADING: {
+        if (this.frozenWait) break;
         this.waitLeft -= dt;
         if (this.waitLeft <= 0) this.depart();
         break;
