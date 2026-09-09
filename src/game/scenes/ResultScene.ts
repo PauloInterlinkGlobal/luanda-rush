@@ -18,17 +18,36 @@ export class ResultScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     const save = SaveManager.load();
+    const promoted = this.stats.promoted;
+    if (promoted) {
+      SaveManager.update({
+        level: save.level + 1,
+        xp: save.xp + this.stats.xp + 100,
+        money: save.money + 750,
+      });
+    }
     this.add.rectangle(0, 0, width, height, 0x0e1a33).setOrigin(0);
 
     this.add
-      .text(width / 2, 70, "FIM DO TURNO", {
+      .text(width / 2, 70, promoted ? "PROMOÇÃO DESBLOQUEADA" : "FIM DO TURNO", {
         fontFamily: "Impact, 'Arial Black', sans-serif",
         fontSize: "54px",
         color: HEX.yellow,
       })
       .setOrigin(0.5);
 
+    if (promoted) {
+      this.add.text(width / 2, 118, "TODOS OS OBJETIVOS CONCLUÍDOS", {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: "24px",
+        color: HEX.gold,
+      }).setOrigin(0.5);
+      this.createConfetti();
+      this.tweens.add({ targets: this.children.list, alpha: { from: 0.78, to: 1 }, duration: 500, yoyo: true, repeat: 2 });
+    }
+
     const lines = [
+      `Objetivos: ${this.stats.objectivesCompleted}/${this.stats.objectivesTotal}`,
       `Kz ganho: ${this.stats.money}`,
       `Táxis lotados: ${this.stats.taxisFilled}`,
       `Passageiros: ${this.stats.passengers}`,
@@ -49,6 +68,22 @@ export class ResultScene extends Phaser.Scene {
 
     this.btn(height - 120, "JOGAR OUTRA VEZ", () => this.scene.start("Game"));
     this.btn(height - 60, "MENU", () => this.scene.start("Menu"));
+  }
+
+  private createConfetti(): void {
+    const { width } = this.scale;
+    for (let i = 0; i < 28; i += 1) {
+      const piece = this.add.rectangle(width / 2, 120, 6, 10, [0xffc31f, 0xe23b3b, 0x36b45a, 0x2b5fae][i % 4]);
+      this.tweens.add({
+        targets: piece,
+        x: Phaser.Math.Between(40, width - 40),
+        y: Phaser.Math.Between(120, 430),
+        angle: Phaser.Math.Between(-180, 180),
+        duration: Phaser.Math.Between(700, 1250),
+        ease: "Quad.easeOut",
+        onComplete: () => piece.destroy(),
+      });
+    }
   }
 
   private btn(y: number, label: string, onClick: () => void): void {
