@@ -30,7 +30,7 @@ export function buildTaxiFromSheet(scene: Phaser.Scene, key: string): boolean {
   const sourceKey = key.replace("taxi_", "taxi_src_");
   if (!scene.textures.exists(sourceKey)) return false;
 
-  const source = scene.textures.get(sourceKey).getSourceImage() as CanvasImageSource;
+  const source = scene.textures.get(sourceKey).getSourceImage() as HTMLImageElement;
   const texture = scene.textures.createCanvas(key, TAXI_SHEET_W * 2, TAXI_SHEET_H);
   if (!texture) return false;
   const ctx = texture.getContext();
