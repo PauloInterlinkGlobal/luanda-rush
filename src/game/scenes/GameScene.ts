@@ -77,12 +77,10 @@ export class GameScene extends Phaser.Scene {
 
     this.buildProps();
 
-    this.player = new Player(
-      this,
-      MAP_CONFIG.playerSpawn.x,
-      MAP_CONFIG.playerSpawn.y,
-      this.save,
-    );
+    const spawnPoint = this.tutorialMode
+      ? MAP_CONFIG.tutorial.playerSpawn
+      : MAP_CONFIG.playerSpawn;
+    this.player = new Player(this, spawnPoint.x, spawnPoint.y, this.save);
     this.player.on("footstep", () => audio.step());
     this.physics.add.collider(this.player, this.obstacles);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
