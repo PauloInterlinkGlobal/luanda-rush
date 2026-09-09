@@ -61,13 +61,14 @@ export class SpawnManager {
     return p;
   }
 
-  spawnTaxi(forceType?: TaxiType): Taxi | null {
+  spawnTaxi(forceType?: TaxiType, forceSlot?: number): Taxi | null {
     const usedSlots = new Set(
       this.taxis.filter((t) => t.state !== TaxiState.GONE).map((t) => t.slotIndex),
     );
     const free = MAP_CONFIG.taxiSlots.map((_, i) => i).filter((i) => !usedSlots.has(i));
-    if (free.length === 0) return null;
-    const slot = free[Math.floor(Math.random() * free.length)]!;
+    if (forceSlot !== undefined && usedSlots.has(forceSlot)) return null;
+    if (forceSlot === undefined && free.length === 0) return null;
+    const slot = forceSlot ?? free[Math.floor(Math.random() * free.length)]!;
     const type = forceType ?? (weightedPick(TAXI_WEIGHTS) as TaxiType);
     const destination = DESTINATIONS[Math.floor(Math.random() * DESTINATIONS.length)]!;
     const taxi = new Taxi(this.scene, type, destination, slot);
