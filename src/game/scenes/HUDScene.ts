@@ -23,6 +23,7 @@ export class HUDScene extends Phaser.Scene {
   /** Tutorial: tooltip + destaque pulsante sobre o elemento a ensinar. */
   private hudPos!: HudTargetPos;
   private highlightRing!: Phaser.GameObjects.Arc;
+  private tutorialArrow!: Phaser.GameObjects.Text;
   private tooltipBox!: Phaser.GameObjects.Graphics;
   private tooltipText!: Phaser.GameObjects.Text;
   private tooltipMsg = "";
@@ -157,7 +158,7 @@ export class HUDScene extends Phaser.Scene {
     };
     this.highlightRing = this.add
       .circle(0, 0, 40, 0x000000, 0)
-      .setStrokeStyle(3, 0xffc31f, 0.95)
+      .setStrokeStyle(4, 0xffc31f, 0.95)
       .setVisible(false)
       .setDepth(1590);
     this.tweens.add({
@@ -168,9 +169,15 @@ export class HUDScene extends Phaser.Scene {
       repeat: -1,
       ease: "Sine.easeInOut",
     });
+    // Seta animada estilo Tycoon — aponta para o elemento destacado.
+    this.tutorialArrow = this.add
+      .text(0, 0, "👇", { fontSize: "28px" })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(1595);
     this.tooltipBox = this.add.graphics().setDepth(1600).setVisible(false);
     this.tooltipText = this.add
-      .text(0, 0, "", { fontFamily: FONT.body, fontSize: "13px", color: HEX.white })
+      .text(0, 0, "", { fontFamily: FONT.body, fontSize: "15px", color: HEX.white })
       .setOrigin(0.5)
       .setDepth(1601)
       .setVisible(false);
@@ -343,16 +350,24 @@ export class HUDScene extends Phaser.Scene {
     c.on("pointerdown", () => this.events.emit(event));
   }
 
-  /** Introdução breve do tutorial — pequena, sem cobrir o gameplay. */
+  /** Introdução visual do tutorial — ícones em vez de parágrafos, estilo Tycoon. */
   private buildTutorialIntro(width: number, height: number): void {
     const panel = this.add.container(width / 2, height / 2).setDepth(2000);
     const backdrop = this.add.rectangle(0, 0, width, height, 0x071225, 0.55).setOrigin(0.5);
-    const card = this.add.rectangle(0, 0, 450, 170, 0x16305c, 0.98).setStrokeStyle(3, 0xffc31f);
+    const card = this.add.rectangle(0, 0, 380, 220, 0x16305c, 0.98).setStrokeStyle(3, 0xffc31f);
     const title = this.add
-      .text(0, -48, "BEM-VINDO AO LOTADOR!", { fontFamily: FONT.display, fontSize: "22px", color: HEX.yellow })
+      .text(0, -78, "LOTADOR", { fontFamily: FONT.display, fontSize: "30px", color: HEX.yellow })
       .setOrigin(0.5);
+
+    // Fluxo visual: 🚕 + 👤 → 💰
+    const iconTaxi = this.add.text(-70, -28, "🚕", { fontSize: "30px" }).setOrigin(0.5);
+    const plus = this.add.text(-28, -28, "+", { fontFamily: FONT.display, fontSize: "24px", color: HEX.white }).setOrigin(0.5);
+    const iconPax = this.add.text(14, -28, "👤", { fontSize: "30px" }).setOrigin(0.5);
+    const arrowDown = this.add.text(-28, 8, "↓", { fontFamily: FONT.display, fontSize: "22px", color: HEX.gold }).setOrigin(0.5);
+    const iconMoney = this.add.text(-28, 34, "💰", { fontSize: "30px" }).setOrigin(0.5);
+
     const line = this.add
-      .text(0, -4, "Ajuda os passageiros a entrar nos táxis e completa\nos objetivos antes do tempo acabar.", {
+      .text(0, 70, "Leva passageiros aos táxis.", {
         fontFamily: FONT.body,
         fontSize: "14px",
         color: HEX.white,
@@ -360,11 +375,11 @@ export class HUDScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const action = this.add
-      .rectangle(0, 52, 200, 44, 0xffc31f)
+      .rectangle(0, 108, 200, 44, 0xffc31f)
       .setStrokeStyle(3, 0x0e1a33)
       .setInteractive({ useHandCursor: true });
     const actionText = this.add
-      .text(0, 52, "COMEÇAR", { fontFamily: FONT.display, fontSize: "20px", color: "#0e1a33" })
+      .text(0, 108, "▶ COMEÇAR", { fontFamily: FONT.display, fontSize: "20px", color: "#0e1a33" })
       .setOrigin(0.5);
     action.on("pointerdown", () => {
       audio.ui();
@@ -372,9 +387,10 @@ export class HUDScene extends Phaser.Scene {
       this.tutorialPanel = undefined;
       this.game_.advanceTutorial();
     });
-    panel.add([backdrop, card, title, line, action, actionText]);
+    panel.add([backdrop, card, title, iconTaxi, plus, iconPax, arrowDown, iconMoney, line, action, actionText]);
     this.tutorialPanel = panel;
     this.tweens.add({ targets: action, scale: 1.05, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: arrowDown, y: 14, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
   /** Posição do tooltip por etapa — nunca cobre o elemento destacado. */
@@ -414,8 +430,8 @@ export class HUDScene extends Phaser.Scene {
       this.tooltipText.setText(message);
       this.tooltipMsg = message;
     }
-    const w = this.tooltipText.width + 24;
-    const h = 30;
+    const w = this.tooltipText.width + 28;
+    const h = 34;
     const cx = Phaser.Math.Clamp(x, w / 2 + 8, this.scale.width - w / 2 - 8);
     const g = this.tooltipBox;
     g.clear();
@@ -427,11 +443,12 @@ export class HUDScene extends Phaser.Scene {
     this.tooltipText.setPosition(cx, y).setVisible(true);
   }
 
-  /** Camada guiada: destaque + tooltip conforme a etapa actual do tutorial. */
+  /** Camada guiada: destaque + seta + tooltip conforme a etapa actual do tutorial. */
   private renderTutorial(): void {
     const ctl = this.game_.tutorialCtl;
     if (!ctl) {
       this.highlightRing.setVisible(false);
+      this.tutorialArrow.setVisible(false);
       this.tooltipBox.setVisible(false);
       this.tooltipText.setVisible(false);
       return;
@@ -440,6 +457,19 @@ export class HUDScene extends Phaser.Scene {
     const target = info.hudTarget ? this.hudPos[info.hudTarget] : null;
     this.highlightRing.setVisible(!!target);
     if (target) this.highlightRing.setPosition(target.x, target.y).setRadius(target.r);
+
+    // Seta animada apontando para o elemento destacado (bounce manual, sem tweens acumulados).
+    if (target) {
+      const isBottom = target.y > this.scale.height / 2;
+      this.tutorialArrow.setText(isBottom ? "👇" : "👆");
+      const arrowOffset = target.r + 22;
+      const ax = target.x;
+      const baseY = isBottom ? target.y - arrowOffset : target.y + arrowOffset;
+      const bounce = Math.sin(this.time.now / 300) * 7;
+      this.tutorialArrow.setPosition(ax, baseY + (isBottom ? bounce : -bounce)).setVisible(true);
+    } else {
+      this.tutorialArrow.setVisible(false);
+    }
 
     const anchor = this.tooltipAnchor(ctl.step);
     const hiddenHint = ctl.step === TutorialStep.FREE_PLAY && !ctl.showHint;
