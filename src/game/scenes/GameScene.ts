@@ -102,12 +102,15 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.tutorialMode) this.spawnNpcs(this.difficulty.current.npcCount);
     this.spawnPedestrians();
-    this.spawns.spawnTaxi(TaxiType.NORMAL);
     if (this.tutorialMode) {
-      // Passageiro inicial com destino servido pelo táxi do tutorial (sistema real).
-      this.spawns.spawnPassenger(this.spawns.taxis[0]?.destination);
+      // Nível 1: cenário determinístico — 1 táxi, 1 passageiro, 0 rivais.
+      this.spawns.autoSpawn = false;
+      const taxi = this.spawns.spawnTaxi(TaxiType.NORMAL, MAP_CONFIG.tutorial.taxiSlot);
+      if (taxi) taxi.frozenWait = true;
+      this.spawnTutorialPassenger();
       this.tutorialCtl = new TutorialController(this);
     } else {
+      this.spawns.spawnTaxi(TaxiType.NORMAL);
       for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) {
         this.spawns.spawnPassenger();
       }
