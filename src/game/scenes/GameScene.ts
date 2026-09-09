@@ -163,6 +163,13 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Nível 1: um único passageiro, sempre no mesmo sítio e com o destino do táxi. */
+  private spawnTutorialPassenger(): void {
+    const taxi = this.spawns.taxis.find((t) => t.active && t.state !== TaxiState.GONE);
+    const p = this.spawns.spawnPassenger(taxi?.destination, MAP_CONFIG.tutorial.passengerSpawn);
+    if (p) p.frozenPatience = true;
+  }
+
   private spawnNpcs(count: number): void {
     const world = { passengers: this.spawns.passengers, taxis: this.spawns.taxis };
     for (let i = this.npcs.length; i < count; i++) {
