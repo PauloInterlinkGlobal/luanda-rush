@@ -87,6 +87,11 @@ export class SpawnManager {
     const dt = delta / 1000;
     const rushFactor = rush ? 0.55 : 1;
 
+    if (!this.autoSpawn) {
+      this.cleanup();
+      return;
+    }
+
     this.passengerTimer -= dt;
     if (this.passengerTimer <= 0) {
       this.passengerTimer = passengerRate * rushFactor;
