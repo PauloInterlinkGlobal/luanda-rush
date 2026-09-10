@@ -23,6 +23,62 @@ import {
   buildTaxiFromAtlas,
   hasFrame,
 } from "./AtlasArt";
+import { buildTaxiFromSheet, hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
+import {
+  buildPersonFromSheet,
+  buildPropFromSheet,
+  hasPersonFrame,
+  hasPropFrame,
+  preloadScenerySheets,
+} from "./SceneryArt";
+
+/** Pessoas reais (folha enviada) usadas pelos lotadores rivais. */
+const NPC_PEOPLE: Record<string, string> = {
+  npc_kito: "ped_estudante",
+  npc_manuel: "ped_mala",
+  npc_debora: "ped_moca",
+  mentor_ze: "ped_gestor",
+};
+
+/** Figurantes que só dão ambiente à paragem (todas as figuras da folha). */
+export const AMBIENT_PEOPLE = [
+  "ped_mala",
+  "ped_estudante",
+  "ped_senhora",
+  "ped_gestor",
+  "ped_moca",
+  "ped_capuz",
+] as const;
+
+/** Variações de cor de roupa dos figurantes. */
+export const AMBIENT_TINTS = [0xffc31f, 0x2b5fae, 0x36b45a, 0xe23b3b, 0xf5f2e8] as const;
+
+/** Todas as texturas de figurante disponíveis. */
+export const AMBIENT_KEYS: string[] = AMBIENT_PEOPLE.flatMap((p) => [`amb_${p}`, `amb_${p}_b`]);
+
+/** Passageiro -> pessoa real da folha (uma figura distinta por tipo). */
+const PASSENGER_PEOPLE: Record<string, string> = {
+  NORMAL: "ped_mala",
+  APRESSADO: "ped_moca",
+  INDECISO: "ped_capuz",
+  OBSERVADOR: "ped_estudante",
+  EXIGENTE: "ped_senhora",
+  CORRERIA: "ped_estudante",
+  ESPECIAL: "ped_gestor",
+};
+
+
+/** Objecto do mapa -> frame da folha real de cenário. */
+const PROP_SHEET_KEYS: Record<string, string> = {
+  tree: "prop_tree",
+  stall: "prop_stall_agua",
+  bench: "prop_bench",
+  sign: "prop_sign_taxi",
+  cone: "prop_cone",
+  shelter: "prop_shelter",
+};
+
+
 
 /** Skins dos NPC lotadores e do mentor (fallback procedural). */
 export const NPC_SKINS: Record<string, CharacterSkin> = {
@@ -56,7 +112,10 @@ export class AssetManager {
     if (!scene.textures.exists(PLAYER_SHEET_KEY)) {
       scene.load.image(PLAYER_SHEET_KEY, PLAYER_SHEET_URL);
     }
+    preloadTaxiSheets(scene);
+    preloadScenerySheets(scene);
   }
+
 
   /** Cria todas as texturas do jogo. Idempotente. */
   static buildAll(scene: Phaser.Scene, playerSkin: CharacterSkin = DEFAULT_CHARACTER): void {
@@ -64,23 +123,38 @@ export class AssetManager {
 
     this.buildPlayer(scene, playerSkin);
     Object.entries(NPC_SKINS).forEach(([key, skin]) => {
+      const person = NPC_PEOPLE[key];
+      // Pessoas reais (folha enviada) têm prioridade.
+      if (person && hasPersonFrame(person) && buildPersonFromSheet(scene, key, person)) return;
       const atlas = ATLAS_CHARACTERS[key];
       if (!atlas || !buildCharacterFromAtlas(scene, key, atlas)) {
         buildCharacterSheet(scene, key, skin);
       }
     });
+    // Figurantes de ambiente (versão original + variante de roupa)
+    AMBIENT_PEOPLE.forEach((person, i) => {
+      buildPersonFromSheet(scene, `amb_${person}`, person);
+      buildPersonFromSheet(scene, `amb_${person}_b`, person, AMBIENT_TINTS[i % AMBIENT_TINTS.length]);
+    });
     Object.values(PASSENGERS).forEach((p) => {
       const key = `pass_${p.type}`;
+      const person = PASSENGER_PEOPLE[p.type];
+      const shirt = PALETTE.shirts[p.skin.shirt % PALETTE.shirts.length];
+      if (person && hasPersonFrame(person) && buildPersonFromSheet(scene, key, person, shirt))
+        return;
       if (!hasFrame(key) || !buildCharacterFromAtlas(scene, key, { down: key })) {
         buildCharacterSheet(scene, key, p.skin);
       }
     });
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
+      // A Hiace fornecida tem prioridade; atlas/procedural ficam como fallback.
+      if (buildTaxiFromSheet(scene, key) || hasTaxiSheet(scene, key)) return;
       if (!hasFrame(key) || !buildTaxiFromAtlas(scene, key, key)) {
         buildTaxiTexture(scene, key, t.bodyColor, t.roofColor);
       }
     });
+
     const PROP_SIZE: Record<string, [number, number]> = {
       tree: [96, 120],
       stall: [110, 90],
@@ -91,8 +165,11 @@ export class AssetManager {
       cone: [30, 40],
       wall: [120, 90],
     };
-    ["tree", "stall", "bin", "lamp", "bench", "sign", "cone", "wall"].forEach((k) => {
+    ["tree", "stall", "bin", "lamp", "bench", "sign", "cone", "wall", "shelter"].forEach((k) => {
       const [w, h] = PROP_SIZE[k] ?? [64, 64];
+      const frame = PROP_SHEET_KEYS[k];
+      // Objectos reais (folha de cenário enviada) têm prioridade.
+      if (frame && hasPropFrame(frame) && buildPropFromSheet(scene, `prop_${k}`, frame)) return;
       if (!hasFrame(`prop_${k}`) || !buildSpriteFromAtlas(scene, `prop_${k}`, `prop_${k}`, w, h)) {
         buildPropTexture(scene, k);
       }
@@ -133,13 +210,11 @@ export class AssetManager {
     if (!ok) buildCharacterSheet(scene, "player", skin);
   }
 
-
   /** Reconstrói só o sprite do jogador (usado pela customização). */
   static rebuildPlayer(scene: Phaser.Scene, skin: CharacterSkin): void {
     this.buildPlayer(scene, skin);
     this.registerCharacterAnims(scene, "player", true);
   }
-
 
   private static buildGroundTexture(scene: Phaser.Scene): void {
     const key = "ground";
@@ -196,7 +271,11 @@ export class AssetManager {
 
   /** Regista as animações de todos os personagens e táxis. */
   static registerAnimations(scene: Phaser.Scene): void {
-    ["player", ...Object.keys(NPC_SKINS)].forEach((k) =>
+    [
+      "player",
+      ...Object.keys(NPC_SKINS),
+      ...AMBIENT_KEYS,
+    ].forEach((k) =>
       this.registerCharacterAnims(scene, k, false),
     );
     Object.values(PASSENGERS).forEach((p) =>
@@ -204,10 +283,14 @@ export class AssetManager {
     );
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
-      if (!scene.anims.exists(`${key}-roll`)) {
+      const texture = scene.textures.get(key);
+      const frames = [0, 1].filter((frame) => texture.has(String(frame)));
+      if (frames.length > 0 && !scene.anims.exists(`${key}-roll`)) {
         scene.anims.create({
           key: `${key}-roll`,
-          frames: scene.anims.generateFrameNumbers(key, { start: 0, end: 1 }),
+          // As texturas dos táxis são CanvasTextures com frames adicionados
+          // manualmente; valide-os antes de criar uma animação jogável.
+          frames: frames.map((frame) => ({ key, frame })),
           frameRate: 12,
           repeat: -1,
         });
@@ -234,11 +317,14 @@ export class AssetManager {
         [`${key}-interact-${dir}`, [base + 5, base], 6, 0],
         [`${key}-celebrate-${dir}`, [base + 5, base], 8, 2],
       ];
+      const texture = scene.textures.get(key);
       defs.forEach(([animKey, frames, rate, repeat]) => {
+        const validFrames = frames.filter((frame) => texture.has(String(frame)));
+        if (validFrames.length === 0) return;
         if (scene.anims.exists(animKey)) scene.anims.remove(animKey);
         scene.anims.create({
           key: animKey,
-          frames: frames.map((f) => ({ key, frame: f })),
+          frames: validFrames.map((frame) => ({ key, frame })),
           frameRate: rate,
           repeat,
         });

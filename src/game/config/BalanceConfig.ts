@@ -4,6 +4,8 @@
  */
 export const BALANCE = {
   matchDuration: 180, // segundos
+  /** Nível 1 (tutorial): tempo generoso para um jogador novo. */
+  tutorialMatchDuration: 300,
   countdown: 3,
 
   startingMoney: 0,

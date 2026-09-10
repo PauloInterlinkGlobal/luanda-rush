@@ -3,6 +3,7 @@ import { ClientOnly } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 
 const GameCanvas = lazy(() => import("../components/GameCanvas"));
+const OrientationGuard = lazy(() => import("../components/OrientationGuard"));
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,6 +32,7 @@ function Index() {
       <h1 className="sr-only">LOTADOR — jogo arcade de lotadores de táxi em Luanda</h1>
       <ClientOnly fallback={<p className="text-[#ffc31f]">A carregar o jogo...</p>}>
         <Suspense fallback={<p className="text-[#ffc31f]">A carregar o jogo...</p>}>
+          <OrientationGuard />
           <GameCanvas />
         </Suspense>
       </ClientOnly>
