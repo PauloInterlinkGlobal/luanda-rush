@@ -7,6 +7,16 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // Phaser é uma dependência grande e browser-only. Pré-empacotá-lo evita que o
+  // chunk carregado pelo `lazy()` tente buscar um optimized dep inconsistente.
+  vite: {
+    optimizeDeps: {
+      include: ["phaser"],
+    },
+    ssr: {
+      noExternal: ["phaser"],
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
