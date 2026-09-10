@@ -14,7 +14,6 @@ import {
 import { PALETTE } from "../config/AssetConfig";
 import {
   ATLAS_KEY,
-  ATLAS_URL,
   PLAYER_SHEET_KEY,
   PLAYER_SHEET_URL,
   buildCharacterFromAtlas,
@@ -106,9 +105,6 @@ export class AssetManager {
   private static built = new Set<string>();
 
   static preload(scene: Phaser.Scene): void {
-    if (!scene.textures.exists(ATLAS_KEY)) {
-      scene.load.image(ATLAS_KEY, ATLAS_URL);
-    }
     if (!scene.textures.exists(PLAYER_SHEET_KEY)) {
       scene.load.image(PLAYER_SHEET_KEY, PLAYER_SHEET_URL);
     }

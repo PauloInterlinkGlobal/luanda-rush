@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { useCallback, useEffect, useState } from "react";
 
 /**
@@ -7,6 +9,14 @@ import { useCallback, useEffect, useState } from "react";
  * a partir do botão do overlay e também numa primeira tentativa silenciosa.
  */
 async function goFullscreenLandscape(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await ScreenOrientation.lock({ type: "landscape" });
+    } catch {
+      /* Algumas versões do sistema ignoram o lock; o jogo continua utilizável. */
+    }
+    return;
+  }
   const el = document.documentElement as HTMLElement & {
     requestFullscreen?: () => Promise<void>;
     webkitRequestFullscreen?: () => Promise<void>;

@@ -1,58 +1,63 @@
-const CACHE_NAME = "lotador-offline-v2";
+const CACHE_NAME = "lotador-offline-v3";
 const CORE_ASSETS = [
   "/",
+  "/index.html",
   "/manifest.webmanifest",
   "/favicon.png",
-  "/lotador_atlas_clean.png",
+  "/favicon.ico",
   "/player_sheet.png",
+  "/lotador_sprites.png",
+  "/lotador_atlas_clean.png",
+  "/npcs_people.png",
+  "/props_street.png",
+  "/taxi_blue.png",
+  "/taxi_green.png",
+  "/taxi_red.png",
+  "/taxi_yellow.png",
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS).catch(() => undefined)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
-      ),
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))),
   );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin)
-    return;
-  const url = new URL(event.request.url);
-  const isAppModule =
-    event.request.destination === "script" ||
-    url.pathname.startsWith("/src/") ||
-    url.pathname.includes("/@vite/") ||
-    url.pathname.includes("node_modules/");
-
-  // Nunca persista módulos do Vite: uma versão antiga pode impedir imports
-  // dinâmicos e deixar o jogo preso em um chunk inválido após HMR/deploy.
-  if (isAppModule) {
-    event.respondWith(fetch(event.request));
+  if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
+  const request = event.request;
+  const url = new URL(request.url);
+  const staticAsset = /\.(png|jpg|jpeg|webp|svg|ico|mp3|wav|ogg|woff2?)$/i.test(url.pathname);
+  const codeAsset = /\.(js|css)$/i.test(url.pathname);
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).then((response) => {
+      const copy = response.clone();
+      void caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", copy));
+      return response;
+    }).catch(() => caches.match("/index.html").then((response) => response || caches.match("/"))));
     return;
   }
-
-  event.respondWith(
-    caches.match(event.request).then(
-      (cached) =>
-        cached ||
-        fetch(event.request)
-          .then((response) => {
-            if (response.ok && CORE_ASSETS.includes(url.pathname)) {
-              const copy = response.clone();
-              void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-            }
-            return response;
-          })
-          .catch(() => caches.match("/")),
-    ),
-  );
+  if (staticAsset) {
+    event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+      const copy = response.clone();
+      void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      return response;
+    })));
+    return;
+  }
+  if (codeAsset) {
+    event.respondWith(caches.match(request).then((cached) => {
+      const network = fetch(request).then((response) => {
+        const copy = response.clone();
+        void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        return response;
+      });
+      return cached || network;
+    }));
+  }
 });
