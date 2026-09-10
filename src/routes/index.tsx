@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-[#0e1a33]">
+    <main className="fixed inset-0 h-[100dvh] w-[100dvw] overflow-hidden bg-[#0e1a33]">
       <h1 className="sr-only">LOTADOR — jogo arcade de lotadores de táxi em Luanda</h1>
       <ClientOnly fallback={<p className="text-[#ffc31f]">A carregar o jogo...</p>}>
         <Suspense fallback={<p className="text-[#ffc31f]">A carregar o jogo...</p>}>

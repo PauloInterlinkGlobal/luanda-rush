@@ -20,6 +20,10 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+      // Expand to fill available viewport (landscape phones)
+      width: GAME_CONFIG.width,
+      height: GAME_CONFIG.height,
+      autoRound: true,
     },
     physics: {
       default: "arcade",

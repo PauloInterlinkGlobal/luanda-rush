@@ -18,6 +18,8 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
   override state: TaxiState = TaxiState.ARRIVING;
   slotIndex: number;
   arrivedAt = 0;
+  /** Tutorial: fica à espera indefinidamente (não parte por tempo). */
+  frozenWait = false;
 
   private targetX: number;
   private label: Phaser.GameObjects.Container;
@@ -46,8 +48,8 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(128, 44);
-    body.setOffset(10, 32);
+    body.setSize(136, 42);
+    body.setOffset(6, 38);
 
     body.setImmovable(true);
     this.setDepth(slot.y);
@@ -92,7 +94,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
         color: HEX.white,
       })
       .setOrigin(0.5);
-    const c = scene.add.container(this.x, this.y - 74, [bg, text]);
+    const c = scene.add.container(this.x, this.y - 82, [bg, text]);
     c.setDepth(100001);
     return c;
   }
@@ -105,7 +107,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
   }
 
   get boardPoint(): Phaser.Math.Vector2 {
-    return new Phaser.Math.Vector2(this.x - 34, this.y + 40);
+    return new Phaser.Math.Vector2(this.x - 42, this.y + 44);
   }
 
 
@@ -139,7 +141,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
     switch (this.state) {
       case TaxiState.ARRIVING: {
         this.setVelocityX(340);
-        this.dust?.setPosition(this.x - 60, this.y + 26);
+        this.dust?.setPosition(this.x - 64, this.y + 42);
         if (this.x >= this.targetX) {
           this.x = this.targetX;
           this.setVelocityX(0);
@@ -154,6 +156,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
       }
       case TaxiState.WAITING:
       case TaxiState.LOADING: {
+        if (this.frozenWait) break;
         this.waitLeft -= dt;
         if (this.waitLeft <= 0) this.depart();
         break;
@@ -168,7 +171,7 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
         const rollAnimation = `taxi_${this.def.type}-roll`;
         if (this.scene.anims.exists(rollAnimation)) this.play(rollAnimation, true);
         this.setVelocityX(this.body ? Math.min(420, (this.body.velocity.x || 60) + 500 * dt) : 300);
-        this.dust?.setPosition(this.x - 60, this.y + 26);
+        this.dust?.setPosition(this.x - 64, this.y + 42);
         if (this.x > MAP_CONFIG.width + 200) {
           this.state = TaxiState.GONE;
         }
@@ -181,9 +184,9 @@ export class Taxi extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.label.setPosition(this.x, this.y - 74);
-    this.countText.setPosition(this.x, this.y - 52);
+    this.countText.setPosition(this.x, this.y - 60);
     this.countText.setText(`${this.currentPassengers} / ${this.capacity}`);
-    this.timerBar.setPosition(this.x - 45, this.y - 36);
+    this.timerBar.setPosition(this.x - 45, this.y - 42);
     const ratio = Phaser.Math.Clamp(this.waitLeft / this.def.waitTime, 0, 1);
     this.timerBar.width = 90 * ratio;
     this.timerBar.fillColor = ratio > 0.5 ? 0x36b45a : ratio > 0.25 ? 0xffc31f : 0xe23b3b;

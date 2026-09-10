@@ -30,6 +30,14 @@ export const MAP_CONFIG = {
   ],
 
   playerSpawn: { x: 800, y: 540 },
+
+  /** Nível 1 (tutorial): posições fixas e próximas — sempre a mesma experiência. */
+  tutorial: {
+    playerSpawn: { x: 800, y: 520 },
+    passengerSpawn: { x: 700, y: 575 },
+    taxiSlot: 1,
+  },
+
   npcSpawns: [
     { x: 260, y: 540 },
     { x: 1280, y: 545 },
@@ -76,7 +84,42 @@ export const MAP_CONFIG = {
     ["wall", 160, 150],
     ["wall", 1400, 130],
     ["wall", 1500, 130],
+    // Paragem coberta e mais vida na rua
+    ["shelter", 1040, 612],
+    ["shelter", 240, 612],
+    ["stall", 620, 250],
+    ["tree", 1050, 420],
+    ["tree", 860, 1010],
+    ["tree", 1460, 1010],
+    ["tree", 40, 1010],
+    ["bench", 1150, 545],
+    ["bench", 640, 545],
+    ["bin", 1300, 545],
+    ["sign", 1480, 500],
+    ["cone", 380, 660],
+    ["cone", 420, 672],
+    ["cone", 460, 684],
+    ["cone", 1000, 830],
+    ["cone", 1040, 842],
+    ["cone", 900, 880],
+    ["cone", 240, 900],
   ] as [string, number, number][],
+
+  /** Sítios por onde os figurantes (transeuntes) circulam. */
+  ambientSpawns: [
+    { x: 180, y: 560 },
+    { x: 700, y: 580 },
+    { x: 1150, y: 470 },
+    { x: 480, y: 960 },
+    { x: 1250, y: 940 },
+    { x: 950, y: 330 },
+    { x: 360, y: 350 },
+    { x: 1420, y: 580 },
+    { x: 820, y: 980 },
+    { x: 1450, y: 380 },
+    { x: 100, y: 950 },
+    { x: 600, y: 460 },
+  ],
 } as const;
 
 /** Zonas do mapa de campanha (só a primeira desbloqueada no MVP). */
