@@ -7,7 +7,6 @@ const CORE_ASSETS = [
   "/favicon.ico",
   "/player_sheet.png",
   "/lotador_sprites.png",
-  "/lotador_atlas_clean.png",
   "/npcs_people.png",
   "/props_street.png",
   "/taxi_blue.png",
