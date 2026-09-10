@@ -142,3 +142,123 @@
     color: var(--color-foreground);
   }
 }
+
+
+/* ============================================================
+   LOTADOR — Mobile landscape + fullscreen
+   ============================================================ */
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+html {
+  background: #0e1a33;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.lotador-game-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  min-width: 100vw;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #0e1a33;
+}
+
+.lotador-game-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+/* Never allow the game itself to be played in portrait. */
+.lotador-orientation-gate {
+  position: fixed;
+  z-index: 2147483647;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #0e1a33;
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+.lotador-orientation-card {
+  width: min(92vw, 520px);
+  padding: 28px 24px;
+  border-radius: 20px;
+  background: rgba(23, 26, 33, 0.96);
+  box-sizing: border-box;
+}
+
+.lotador-orientation-card h1 {
+  margin: 0 0 12px;
+  font-size: clamp(24px, 5vw, 36px);
+  font-weight: 800;
+}
+
+.lotador-orientation-card p {
+  margin: 0 0 22px;
+  line-height: 1.55;
+  font-size: clamp(15px, 3vw, 19px);
+  opacity: 0.9;
+}
+
+.lotador-phone-icon {
+  margin: 0 auto 14px;
+  font-size: 56px;
+  line-height: 1;
+  transform: rotate(-45deg);
+}
+
+.lotador-orientation-button {
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 20px;
+  background: #ffc31f;
+  color: #171a21;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (orientation: portrait) {
+  .lotador-game-container {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) {
+  .lotador-orientation-gate {
+    display: none;
+  }
+}
