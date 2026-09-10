@@ -23,7 +23,7 @@ import {
   buildTaxiFromAtlas,
   hasFrame,
 } from "./AtlasArt";
-import { hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
+import { buildTaxiFromSheet, hasTaxiSheet, preloadTaxiSheets } from "./TaxiArt";
 import {
   buildPersonFromSheet,
   buildPropFromSheet,
@@ -40,19 +40,33 @@ const NPC_PEOPLE: Record<string, string> = {
   mentor_ze: "ped_gestor",
 };
 
-/** Figurantes que só dão ambiente à paragem. */
-export const AMBIENT_PEOPLE = ["ped_senhora", "ped_gestor", "ped_capuz"] as const;
+/** Figurantes que só dão ambiente à paragem (todas as figuras da folha). */
+export const AMBIENT_PEOPLE = [
+  "ped_mala",
+  "ped_estudante",
+  "ped_senhora",
+  "ped_gestor",
+  "ped_moca",
+  "ped_capuz",
+] as const;
 
-/** Passageiro -> pessoa real da folha. */
+/** Variações de cor de roupa dos figurantes. */
+export const AMBIENT_TINTS = [0xffc31f, 0x2b5fae, 0x36b45a, 0xe23b3b, 0xf5f2e8] as const;
+
+/** Todas as texturas de figurante disponíveis. */
+export const AMBIENT_KEYS: string[] = AMBIENT_PEOPLE.flatMap((p) => [`amb_${p}`, `amb_${p}_b`]);
+
+/** Passageiro -> pessoa real da folha (uma figura distinta por tipo). */
 const PASSENGER_PEOPLE: Record<string, string> = {
-  NORMAL: "ped_gestor",
-  APRESSADO: "ped_estudante",
+  NORMAL: "ped_mala",
+  APRESSADO: "ped_moca",
   INDECISO: "ped_capuz",
-  OBSERVADOR: "ped_mala",
+  OBSERVADOR: "ped_estudante",
   EXIGENTE: "ped_senhora",
-  CORRERIA: "ped_moca",
-  ESPECIAL: "ped_senhora",
+  CORRERIA: "ped_estudante",
+  ESPECIAL: "ped_gestor",
 };
+
 
 /** Objecto do mapa -> frame da folha real de cenário. */
 const PROP_SHEET_KEYS: Record<string, string> = {
@@ -117,9 +131,10 @@ export class AssetManager {
         buildCharacterSheet(scene, key, skin);
       }
     });
-    // Figurantes de ambiente
-    AMBIENT_PEOPLE.forEach((person) => {
+    // Figurantes de ambiente (versão original + variante de roupa)
+    AMBIENT_PEOPLE.forEach((person, i) => {
       buildPersonFromSheet(scene, `amb_${person}`, person);
+      buildPersonFromSheet(scene, `amb_${person}_b`, person, AMBIENT_TINTS[i % AMBIENT_TINTS.length]);
     });
     Object.values(PASSENGERS).forEach((p) => {
       const key = `pass_${p.type}`;
@@ -133,8 +148,8 @@ export class AssetManager {
     });
     Object.values(TAXIS).forEach((t) => {
       const key = `taxi_${t.type}`;
-      // Folha real da Hiace (renderizada do modelo 3D) tem prioridade.
-      if (hasTaxiSheet(scene, key)) return;
+      // A Hiace fornecida tem prioridade; atlas/procedural ficam como fallback.
+      if (buildTaxiFromSheet(scene, key) || hasTaxiSheet(scene, key)) return;
       if (!hasFrame(key) || !buildTaxiFromAtlas(scene, key, key)) {
         buildTaxiTexture(scene, key, t.bodyColor, t.roofColor);
       }
@@ -259,7 +274,7 @@ export class AssetManager {
     [
       "player",
       ...Object.keys(NPC_SKINS),
-      ...AMBIENT_PEOPLE.map((p) => `amb_${p}`),
+      ...AMBIENT_KEYS,
     ].forEach((k) =>
       this.registerCharacterAnims(scene, k, false),
     );

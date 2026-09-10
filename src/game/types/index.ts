@@ -121,7 +121,7 @@ export interface MissionDefinition {
   label: string;
   description: string;
   goal: number;
-  metric: "taxisFilled" | "passengers" | "combo" | "money" | "fastFill";
+  metric: "taxisFilled" | "passengers" | "combo" | "money" | "fastFill" | "callsUsed" | "runsUsed";
   rewardMoney: number;
   rewardXp: number;
 }
@@ -134,6 +134,11 @@ export interface MatchStats {
   xp: number;
   lostPassengers: number;
   fastFill: number;
+  callsUsed: number;
+  runsUsed: number;
+  objectivesTotal: number;
+  objectivesCompleted: number;
+  promoted: boolean;
 }
 
 export interface SaveData {
@@ -146,6 +151,9 @@ export interface SaveData {
   playerName: string;
   missions: Record<string, boolean>;
   bestScore: number;
+  tutorialDone: boolean;
+  fleetLevel: number;
+  stationLevel: number;
   unlockedMaps: string[];
   settings: GameSettings;
 }

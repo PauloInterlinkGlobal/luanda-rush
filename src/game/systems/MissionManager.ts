@@ -12,8 +12,9 @@ export class MissionManager {
   progress: MissionProgress[] = [];
   onComplete?: (m: MissionDefinition) => void;
 
-  constructor(completed: Record<string, boolean>) {
-    this.progress = MISSIONS.map((def) => ({
+  /** `defs` permite usar a configuração de tutorial sem duplicar o sistema. */
+  constructor(completed: Record<string, boolean>, defs: MissionDefinition[] = MISSIONS) {
+    this.progress = defs.map((def) => ({
       def,
       current: 0,
       done: completed[def.id] === true,
@@ -35,6 +36,12 @@ export class MissionManager {
           break;
         case "fastFill":
           p.current = stats.fastFill;
+          break;
+        case "callsUsed":
+          p.current = stats.callsUsed;
+          break;
+        case "runsUsed":
+          p.current = stats.runsUsed;
           break;
         case "combo":
           p.current = Math.max(p.current, combo);

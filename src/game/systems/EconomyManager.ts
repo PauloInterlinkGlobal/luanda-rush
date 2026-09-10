@@ -14,6 +14,11 @@ export class EconomyManager {
     xp: 0,
     lostPassengers: 0,
     fastFill: 0,
+    callsUsed: 0,
+    runsUsed: 0,
+    objectivesTotal: 0,
+    objectivesCompleted: 0,
+    promoted: false,
   };
 
   rewardMultiplier = 1;
@@ -59,6 +64,16 @@ export class EconomyManager {
     this.stats.lostPassengers++;
   }
 
+  /** Um CHAMAR chegou realmente a passageiros (métrica de missão). */
+  registerCall(): void {
+    this.stats.callsUsed++;
+  }
+
+  /** Uma corrida foi realmente ativada (métrica de missão). */
+  registerRun(): void {
+    this.stats.runsUsed++;
+  }
+
   reset(): void {
     this.stats = {
       taxisFilled: 0,
@@ -68,6 +83,11 @@ export class EconomyManager {
       xp: 0,
       lostPassengers: 0,
       fastFill: 0,
+      callsUsed: 0,
+      runsUsed: 0,
+      objectivesTotal: 0,
+      objectivesCompleted: 0,
+      promoted: false,
     };
     this.rewardMultiplier = 1;
   }

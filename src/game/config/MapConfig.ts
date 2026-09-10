@@ -30,6 +30,14 @@ export const MAP_CONFIG = {
   ],
 
   playerSpawn: { x: 800, y: 540 },
+
+  /** Nível 1 (tutorial): posições fixas e próximas — sempre a mesma experiência. */
+  tutorial: {
+    playerSpawn: { x: 800, y: 520 },
+    passengerSpawn: { x: 700, y: 575 },
+    taxiSlot: 1,
+  },
+
   npcSpawns: [
     { x: 260, y: 540 },
     { x: 1280, y: 545 },
@@ -105,6 +113,12 @@ export const MAP_CONFIG = {
     { x: 480, y: 960 },
     { x: 1250, y: 940 },
     { x: 950, y: 330 },
+    { x: 360, y: 350 },
+    { x: 1420, y: 580 },
+    { x: 820, y: 980 },
+    { x: 1450, y: 380 },
+    { x: 100, y: 950 },
+    { x: 600, y: 460 },
   ],
 } as const;
 

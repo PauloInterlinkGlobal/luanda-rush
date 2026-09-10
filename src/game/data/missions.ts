@@ -57,6 +57,40 @@ export const MISSIONS: MissionDefinition[] = [
   },
 ];
 
+/**
+ * Objetivos do nível 1 (tutorial): muito simples, avaliados pelo
+ * MissionManager contra as estatísticas reais da partida.
+ */
+export const TUTORIAL_MISSIONS: MissionDefinition[] = [
+  {
+    id: "tut_chamar",
+    label: "PRIMEIRO CHAMAMENTO",
+    description: "Chamar um passageiro",
+    goal: 1,
+    metric: "callsUsed",
+    rewardMoney: 100,
+    rewardXp: 20,
+  },
+  {
+    id: "tut_correr",
+    label: "AQUECIMENTO",
+    description: "Usar a corrida",
+    goal: 1,
+    metric: "runsUsed",
+    rewardMoney: 100,
+    rewardXp: 20,
+  },
+  {
+    id: "tut_passageiro",
+    label: "BORA, BORA!",
+    description: "Levar 1 passageiro ao táxi",
+    goal: 1,
+    metric: "passengers",
+    rewardMoney: 300,
+    rewardXp: 50,
+  },
+];
+
 export const UPGRADES: UpgradeDefinition[] = [
   {
     id: "velocidade",

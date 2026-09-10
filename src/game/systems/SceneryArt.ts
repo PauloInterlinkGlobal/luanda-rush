@@ -13,6 +13,17 @@ export const PEOPLE_KEY = "npcs_people";
 const PROP_RECTS = PROPS.frames as Record<string, Rect>;
 const PEOPLE_RECTS = PEOPLE.frames as Record<string, Rect>;
 
+const SHIRT_COLORS = ["#e23b3b", "#2b5fae", "#36b45a", "#ffc31f", "#f28c28", "#8b5cf6", "#f4f1ea", "#0e1a33"];
+
+function tintShirt(ctx: CanvasRenderingContext2D, width: number, height: number, shirt: number): void {
+  ctx.save();
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = SHIRT_COLORS[shirt % SHIRT_COLORS.length] ?? "#e23b3b";
+  ctx.globalAlpha = 0.72;
+  ctx.fillRect(0, Math.round(height * 0.28), width, Math.round(height * 0.42));
+  ctx.restore();
+}
+
 /** Altura desejada (px) de cada objecto de rua no mapa. */
 export const PROP_HEIGHT: Record<string, number> = {
   prop_bench: 62,
@@ -24,8 +35,8 @@ export const PROP_HEIGHT: Record<string, number> = {
 };
 
 export function preloadScenerySheets(scene: Phaser.Scene): void {
-  if (!scene.textures.exists(PROPS_KEY)) scene.load.image(PROPS_KEY, PROPS_ASSET.url);
-  if (!scene.textures.exists(PEOPLE_KEY)) scene.load.image(PEOPLE_KEY, PEOPLE_ASSET.url);
+  if (!scene.textures.exists(PROPS_KEY)) scene.load.image(PROPS_KEY, "/assets/props_street.png");
+  if (!scene.textures.exists(PEOPLE_KEY)) scene.load.image(PEOPLE_KEY, "/assets/npcs_people.png");
 }
 
 export function hasPropFrame(name: string): boolean {
@@ -74,25 +85,28 @@ export function buildPropFromSheet(
   return true;
 }
 
-/** Recolor simples da zona do tronco, para variar passageiros. */
-function tintShirt(ctx: CanvasRenderingContext2D, w: number, h: number, color: number): void {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, h * 0.3, w, h * 0.28);
-  ctx.clip();
-  ctx.globalCompositeOperation = "color";
-  ctx.globalAlpha = 0.85;
-  ctx.fillStyle = css(color);
-  ctx.fillRect(0, h * 0.3, w, h * 0.28);
-  ctx.restore();
+/** Constrói a arte real sem permitir que um recorte inválido derrube o BootScene. */
+export function buildPersonFromSheet(
+  scene: Phaser.Scene,
+  key: string,
+  personKey: string,
+  shirt?: number,
+): boolean {
+  try {
+    return buildPersonFromSheetUnsafe(scene, key, personKey, shirt);
+  } catch (error) {
+    console.warn(`[v0] Falha ao construir personagem ${personKey}; usando fallback.`, error);
+    return false;
+  }
 }
+
 
 /**
  * Gera um spritesheet 6x4 (idle/andar/especial x 4 direcções) a partir do
  * frame frontal de uma pessoa real. Lado = frame espelhado; costas = frame
  * frontal ligeiramente escurecido. Mantém o formato usado pelo motor.
  */
-export function buildPersonFromSheet(
+function buildPersonFromSheetUnsafe(
   scene: Phaser.Scene,
   key: string,
   personKey: string,
@@ -105,9 +119,13 @@ export function buildPersonFromSheet(
 
   const sheetW = FRAME_W * FRAMES_PER_ROW;
   const sheetH = FRAME_H * DIR_ROWS.length;
-  const tex = scene.textures.createCanvas(key, sheetW, sheetH);
-  if (!tex) return false;
-  const ctx = tex.getContext();
+  // Canvas próprio (não usar textures.createCanvas + remove: o canvas volta
+  // ao pool do Phaser e é reutilizado pela pessoa seguinte, corrompendo tudo).
+  const canvas = document.createElement("canvas");
+  canvas.width = sheetW;
+  canvas.height = sheetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
   ctx.clearRect(0, 0, sheetW, sheetH);
 
   // Recorte redimensionado (uma vez) num canvas auxiliar
@@ -158,12 +176,15 @@ export function buildPersonFromSheet(
     }
   });
 
+  // Regista o canvas no TextureManager antes de criar os frames Phaser.
+  // Sem este passo `tex` não existe e o BootScene falha ao construir NPCs.
+  const tex = scene.textures.addCanvas(key, canvas);
+  if (!tex) return false;
   tex.refresh();
-  const src = tex.getSourceImage() as HTMLCanvasElement;
-  scene.textures.remove(key);
-  scene.textures.addSpriteSheet(key, src as unknown as HTMLImageElement, {
-    frameWidth: FRAME_W,
-    frameHeight: FRAME_H,
-  });
+  for (let row = 0; row < DIR_ROWS.length; row += 1) {
+    for (let col = 0; col < FRAMES_PER_ROW; col += 1) {
+      tex.add(String(row * FRAMES_PER_ROW + col), 0, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H);
+    }
+  }
   return true;
 }
