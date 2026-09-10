@@ -5,28 +5,25 @@
 > that are already pushed — as it rewrites history on Lovable's side and the
 > user will likely lose their project history.
 >
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
+> Commits you push to the connected branch sync back to Lovable and show up in the
+> editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-## Base44 dev environment
+## Base44 Dev Environment
 
-This is a TanStack Start (SSR via nitro) + Vite + Phaser game ("LOTADOR") using **bun** as its package manager.
+**Stack:** Vite 8 + TanStack Start (SSR via nitro) + React 19 + Phaser 3 + Tailwind v4. Package manager: Bun.
 
-### Running
+**Run:** `docker compose -f docker-compose.base44.yml up -d` — starts the Vite dev server on port 5173, mapped to host port 3000.
 
-```
-docker compose -f docker-compose.base44.yml up -d
-```
+**No external services or credentials required.** This is a frontend-only game; no database, no API keys.
 
-- Base image: `oven/bun:1.2-debian`; source bind-mounted at `/app`.
-- Dev command: `bun run dev` → `vite dev` (live reload, no rebuild needed for edits).
-- The `@lovable.dev/vite-tanstack-config` plugin **forces the dev server to port 8080** (`strictPort` in sandbox mode). The compose file maps host `3000 → container 8080`.
-- `vite.config.ts` sets `server.allowedHosts: true` so the preview's external hostname is accepted (required — the lovable config does not set `allowedHosts`).
-- No external secrets or database required; the app is fully self-contained (client-side Phaser game with SSR shell).
+**Live reload:** The Vite dev server watches the bind-mounted source. Frontend edits appear automatically in the preview.
 
-### Verifying
+**Key files:**
+- `vite.config.ts` — wraps `@lovable.dev/vite-tanstack-config` (includes TanStack Start, React, Tailwind, SSR/nitro, sandbox detection). Phaser is pre-bundled via `optimizeDeps.include`.
+- `src/routes/index.tsx` — home route, lazy-loads the Phaser game canvas (client-only).
+- `src/game/` — Phaser game scenes, entities, systems, data.
+- `src/server.ts` — custom SSR entry with error handling wrapper.
+- `src/start.ts` — TanStack Start instance with CSRF + error middleware.
 
-- `curl -sf http://localhost:3000/` returns the SSR page ("A carregar o jogo...").
-- `curl -sf -H "Host: external-preview.example.com" http://localhost:3000/` must also return the page (external-host check).
-- Dev server logs show `VITE v8.2.0 ready` and serves unhashed source modules (`/src/styles.css`), confirming live source — not a prebuilt bundle.
+**Verify:** `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/` should return 200.

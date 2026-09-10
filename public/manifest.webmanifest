@@ -3,6 +3,7 @@
   "short_name": "Lotador",
   "start_url": "/",
   "display": "fullscreen",
+  "orientation": "landscape",
   "background_color": "#171a21",
   "theme_color": "#ffc31f",
   "icons": [
