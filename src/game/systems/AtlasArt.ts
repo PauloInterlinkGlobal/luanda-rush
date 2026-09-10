@@ -4,7 +4,7 @@ import FRAMES from "../data/atlas-frames.json";
 import PLAYER_SHEET from "../data/player-frames.json";
 export const ATLAS_KEY = "lotador_sprites";
 // Assets públicos e same-origin evitam imports dinâmicos de PNG pelo Vite.
-export const ATLAS_URL = "/lotador_atlas_clean.png";
+export const ATLAS_URL = "";
 export const PLAYER_SHEET_KEY = "player_sheet";
 export const PLAYER_SHEET_URL = "/player_sheet.png";
 

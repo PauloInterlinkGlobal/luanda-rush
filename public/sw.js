@@ -3,7 +3,7 @@ const CORE_ASSETS = [
   "/",
   "/manifest.webmanifest",
   "/favicon.png",
-  "/lotador_atlas_clean.png",
+  "",
   "/player_sheet.png",
 ];
 

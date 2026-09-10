@@ -31,7 +31,7 @@ export async function registerPwa(): Promise<void> {
 }
 
 export function preloadGameAssets(): Promise<void> {
-  const urls = ["/lotador_atlas_clean.png", "/player_sheet.png"];
+  const urls = ["", "/player_sheet.png"];
   return Promise.all(
     urls.map(
       (url) =>
