@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type Phaser from "phaser";
 import { preloadGameAssets, registerPwa } from "../lib/pwa";
+import { SaveManager } from "../game/systems/SaveManager";
 import { createGame } from "../game";
 import { OrientationGate } from "./OrientationGate";
 
@@ -15,7 +16,7 @@ export default function GameCanvas() {
     if (!el) return;
 
     void registerPwa().catch(() => undefined);
-    void preloadGameAssets()
+    void Promise.all([preloadGameAssets(), SaveManager.hydrate()])
       .then(() => {
         if (cancelled) return;
         gameRef.current = createGame(el);

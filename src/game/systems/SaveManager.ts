@@ -1,6 +1,7 @@
 import { DEFAULT_CHARACTER } from "../config/AssetConfig";
 import { BALANCE, LEVEL_TITLES } from "../config/BalanceConfig";
 import type { SaveData } from "../types";
+import { loadGameState, saveGameState } from "../../lib/storage/gameDB";
 
 const KEY = "lotador.save.v1";
 const VERSION = 1;
@@ -65,11 +66,20 @@ export class SaveManager {
 
   static save(data: SaveData): void {
     this.cache = data;
+    void saveGameState(data as unknown as Record<string, unknown>);
     try {
       if (typeof window !== "undefined") window.localStorage.setItem(KEY, JSON.stringify(data));
     } catch (err) {
       console.warn("[SaveManager] não foi possível guardar", err);
     }
+  }
+
+  static async hydrate(): Promise<SaveData> {
+    const stored = await loadGameState();
+    if (!stored) return this.load();
+    const next = { ...this.load(), ...(stored as Partial<SaveData>) };
+    this.cache = next;
+    return next;
   }
 
   static update(patch: Partial<SaveData>): SaveData {

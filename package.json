@@ -6,12 +6,20 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "build:capacitor": "vite build && node scripts/prepare-capacitor.mjs",
+    "cap:sync": "bun run build:capacitor && cap sync",
+    "cap:android": "cap open android",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/screen-orientation": "^8.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -49,6 +57,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "idb": "^8.0.3",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
     "phaser": "3.90.0",
@@ -67,6 +76,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.13.1",
     "@types/node": "^22.16.5",
