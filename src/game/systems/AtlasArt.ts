@@ -3,8 +3,6 @@ import { FRAME_H, FRAME_W, FRAMES_PER_ROW, TAXI_H, TAXI_W, css } from "./Procedu
 import FRAMES from "../data/atlas-frames.json";
 import PLAYER_SHEET from "../data/player-frames.json";
 export const ATLAS_KEY = "lotador_sprites";
-// Asset público e same-origin para manter a fila de preload do Phaser válida.
-export const ATLAS_URL = "/lotador_atlas_clean.png";
 export const PLAYER_SHEET_KEY = "player_sheet";
 export const PLAYER_SHEET_URL = "/player_sheet.png";
 
