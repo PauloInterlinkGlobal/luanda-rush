@@ -174,3 +174,15 @@ body,
 .lotador-rotate-icon {
   animation: lotador-rotate-hint 1.6s ease-in-out infinite;
 }
+
+@keyframes orientation-radar {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
