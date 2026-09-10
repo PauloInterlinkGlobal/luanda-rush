@@ -142,3 +142,35 @@
     color: var(--color-foreground);
   }
 }
+
+/*
+ * LOTADOR joga-se sempre em ecrã inteiro, na horizontal.
+ * html/body ocupam 100% do viewport real do telemóvel (100dvh evita o
+ * salto causado pela barra de endereço do browser) e nunca mostram
+ * scroll/bounce, para o canvas do Phaser preencher o ecrã todo.
+ */
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  position: fixed;
+  inset: 0;
+}
+
+@keyframes lotador-rotate-hint {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-90deg);
+  }
+}
+
+.lotador-rotate-icon {
+  animation: lotador-rotate-hint 1.6s ease-in-out infinite;
+}

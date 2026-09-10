@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type Phaser from "phaser";
 import { preloadGameAssets, registerPwa } from "../lib/pwa";
 import { createGame } from "../game";
+import { OrientationGate } from "./OrientationGate";
 
 /** Monta o jogo Phaser (browser-only). */
 export default function GameCanvas() {
@@ -29,5 +30,9 @@ export default function GameCanvas() {
     };
   }, []);
 
-  return <div ref={ref} className="h-screen w-screen" />;
+  return (
+    <OrientationGate>
+      <div ref={ref} className="h-[100dvh] w-[100dvw]" />
+    </OrientationGate>
+  );
 }
