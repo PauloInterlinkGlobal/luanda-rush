@@ -18,8 +18,11 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     backgroundColor: GAME_CONFIG.backgroundColor,
     pixelArt: false,
     scale: {
-      mode: Phaser.Scale.FIT,
+      // The game always fills the available landscape viewport.
+      mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: window.innerWidth,
+      height: window.innerHeight,
     },
     physics: {
       default: "arcade",
