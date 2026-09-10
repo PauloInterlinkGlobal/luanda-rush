@@ -1,0 +1,13 @@
+{
+  "name": "Lotador",
+  "short_name": "Lotador",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#171a21",
+  "theme_color": "#ffc31f",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
