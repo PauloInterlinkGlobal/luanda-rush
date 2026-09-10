@@ -1,4 +1,4 @@
-# Luanda Rush
+# Lotador Rush
 
 Anexei
 
