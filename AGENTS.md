@@ -9,24 +9,21 @@
 > editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-# Base44 dev environment
+## Base44 Dev Environment
 
-## Stack
-Lovable-generated Vite 8 + TanStack Start (SSR via nitro) + React 19 + Phaser 3 game.
-Package manager: **bun** (bun.lock, bunfig.toml).
+**Stack:** Vite 8 + TanStack Start (SSR via nitro) + React 19 + Phaser 3 + Tailwind v4. Package manager: Bun.
 
-## Running
-`docker compose -f docker-compose.base44.yml up -d`
-- Base image: `oven/bun:1.2` with the repo bind-mounted at `/app`.
-- `bun install --frozen-lockfile` runs on every container start, then `bun run dev` (`vite dev`).
-- **Port quirk:** the `@lovable.dev/vite-tanstack-config` sandbox detection always
-  starts Vite on **8080** inside the container (PORT env is ignored). The compose
-  maps host `3000 → container 8080`. Don't try to change the internal port.
-- Live reload is active; edits to `src/` appear in the preview without a rebuild.
+**Run:** `docker compose -f docker-compose.base44.yml up -d` — starts the Vite dev server on port 5173, mapped to host port 3000.
 
-## No external services / secrets
-The app is fully self-contained — no database, no API keys, no SaaS. `secrets: []`.
+**No external services or credentials required.** This is a frontend-only game; no database, no API keys.
 
-## Verifying
-`curl -sS -o /dev/null -w "%{http_code}" http://localhost:3000/` → 200.
-The served HTML includes `<title>LOTADOR — Chama, Lota, Ganha ...</title>`.
+**Live reload:** The Vite dev server watches the bind-mounted source. Frontend edits appear automatically in the preview.
+
+**Key files:**
+- `vite.config.ts` — wraps `@lovable.dev/vite-tanstack-config` (includes TanStack Start, React, Tailwind, SSR/nitro, sandbox detection). Phaser is pre-bundled via `optimizeDeps.include`.
+- `src/routes/index.tsx` — home route, lazy-loads the Phaser game canvas (client-only).
+- `src/game/` — Phaser game scenes, entities, systems, data.
+- `src/server.ts` — custom SSR entry with error handling wrapper.
+- `src/start.ts` — TanStack Start instance with CSRF + error middleware.
+
+**Verify:** `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/` should return 200.
