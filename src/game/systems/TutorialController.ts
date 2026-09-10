@@ -42,17 +42,17 @@ export interface TutorialStepInfo {
 
 export const TUTORIAL_STEPS: Record<TutorialStep, TutorialStepInfo> = {
   [TutorialStep.INTRO]: { message: "", hudTarget: null },
-  [TutorialStep.MOVE]: { message: "Usa o joystick para te mover.", hudTarget: "joystick" },
-  [TutorialStep.FIND_PASSENGER]: { message: "Aproxima-te do passageiro.", hudTarget: null },
-  [TutorialStep.CALL]: { message: "Toca em CHAMAR.", hudTarget: "call" },
-  [TutorialStep.CONVINCE]: { message: "Toca em E para convencer.", hudTarget: "interact" },
-  [TutorialStep.TAKE_TO_TAXI]: { message: "Leva o passageiro até ao táxi.", hudTarget: null },
-  [TutorialStep.SCORE]: { message: "Aqui vês os teus ganhos.", hudTarget: "money" },
-  [TutorialStep.RUN]: { message: "Experimenta CORRER.", hudTarget: "run" },
-  [TutorialStep.ENERGY]: { message: "Correr gasta energia.", hudTarget: "energy" },
-  [TutorialStep.OBJECTIVES]: { message: "Consulta aqui os objetivos.", hudTarget: "objectives" },
-  [TutorialStep.TIMER]: { message: "Completa tudo antes do tempo acabar.", hudTarget: "timer" },
-  [TutorialStep.FREE_PLAY]: { message: "Completa os objetivos para vencer!", hudTarget: null },
+  [TutorialStep.MOVE]: { message: "🕹️  MOVER", hudTarget: "joystick" },
+  [TutorialStep.FIND_PASSENGER]: { message: "👤  ENCONTRA", hudTarget: null },
+  [TutorialStep.CALL]: { message: "🚕  CHAMAR", hudTarget: "call" },
+  [TutorialStep.CONVINCE]: { message: "✋  CONVENCER", hudTarget: "interact" },
+  [TutorialStep.TAKE_TO_TAXI]: { message: "👤 → 🚕  LEVAR", hudTarget: null },
+  [TutorialStep.SCORE]: { message: "💰  GANHOU!", hudTarget: "money" },
+  [TutorialStep.RUN]: { message: "🏃  CORRER", hudTarget: "run" },
+  [TutorialStep.ENERGY]: { message: "🏃 → ⚡  ENERGIA", hudTarget: "energy" },
+  [TutorialStep.OBJECTIVES]: { message: "🎯  OBJETIVOS", hudTarget: "objectives" },
+  [TutorialStep.TIMER]: { message: "⏱️  TEMPO", hudTarget: "timer" },
+  [TutorialStep.FREE_PLAY]: { message: "🏆  VENCE!", hudTarget: null },
 };
 
 /**

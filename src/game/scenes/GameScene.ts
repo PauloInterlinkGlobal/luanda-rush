@@ -43,6 +43,9 @@ export class GameScene extends Phaser.Scene {
   readonly tutorial = false;
   tutorialMode = false;
   private tutorialTimerStarted = false;
+  /** Spawn progressivo de NPCs rivais — 1 a cada intervalo, não todos de uma vez. */
+  private npcSpawnTimer = 0;
+  private npcTargetCount = 0;
   /** Camada guiada do nível 1 — null fora do tutorial. */
   tutorialCtl: TutorialController | null = null;
   private wasRunning = false;
@@ -93,6 +96,18 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
 
     this.spawns = new SpawnManager(this);
+    // Colisão física entre entidades móveis e táxis — ninguém atravessa carros.
+    this.physics.add.collider(this.player, this.spawns.taxiGroup);
+    this.physics.add.collider(
+      this.spawns.passengerGroup,
+      this.spawns.taxiGroup,
+      undefined,
+      (pObj: any, _tObj: any) => {
+        // Passageiros em FOLLOWING/BOARDING atravessam o táxi para embarcar.
+        const p = pObj as Passenger;
+        return p.state !== PassengerState.FOLLOWING && p.state !== PassengerState.BOARDING;
+      },
+    );
     this.difficulty = new DifficultyManager(this.save.level);
     this.missions = new MissionManager({}, this.tutorialMode ? TUTORIAL_MISSIONS : MISSIONS);
     this.missions.onComplete = (m) => {
@@ -100,7 +115,9 @@ export class GameScene extends Phaser.Scene {
       audio.reward();
     };
 
-    if (!this.tutorialMode) this.spawnNpcs(this.difficulty.current.npcCount);
+    if (!this.tutorialMode) this.spawns.setInitialDelays(this.difficulty.current.passengerRate, this.difficulty.current.taxiRate);
+    this.npcSpawnTimer = BALANCE.npcSpawnInterval;
+    this.npcTargetCount = 0;
     this.spawnPedestrians();
     if (this.tutorialMode) {
       // Nível 1: cenário determinístico — 1 táxi, 1 passageiro, 0 rivais.
@@ -110,10 +127,9 @@ export class GameScene extends Phaser.Scene {
       this.spawnTutorialPassenger();
       this.tutorialCtl = new TutorialController(this);
     } else {
+      // Spawn progressivo: 1 táxi + 1 passageiro no início; o resto vem aos poucos.
       this.spawns.spawnTaxi(TaxiType.NORMAL);
-      for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) {
-        this.spawns.spawnPassenger();
-      }
+      this.spawns.spawnPassenger();
     }
 
     this.setupInput();
@@ -162,6 +178,7 @@ export class GameScene extends Phaser.Scene {
       const key = keys[(i + Phaser.Math.Between(0, keys.length - 1)) % keys.length]!;
       const ped = new Pedestrian(this, spot.x, spot.y, key);
       this.physics.add.collider(ped, this.obstacles);
+      this.physics.add.collider(ped, this.spawns.taxiGroup);
       this.pedestrians.push(ped);
     });
   }
@@ -199,6 +216,7 @@ export class GameScene extends Phaser.Scene {
       const npc = new LotadorNPC(this, spot.x, spot.y, sheet, world);
       npc.on("npc-board", (p: Passenger, taxi: Taxi) => this.npcBoard(p, taxi));
       this.physics.add.collider(npc, this.obstacles);
+      this.physics.add.collider(npc, this.spawns.taxiGroup);
       this.npcs.push(npc);
     }
   }
@@ -468,7 +486,13 @@ export class GameScene extends Phaser.Scene {
     if (this.tutorialMode) {
       this.ensureTutorialWorld();
     } else {
-      this.spawnNpcs(Math.min(d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
+      // NPCs rivais surgem progressivamente (1 a cada intervalo), não todos de uma vez.
+      this.npcSpawnTimer -= dt;
+      if (this.npcSpawnTimer <= 0 && this.npcTargetCount < d.current.npcCount) {
+        this.npcSpawnTimer = BALANCE.npcSpawnInterval;
+        this.npcTargetCount++;
+        this.spawnNpcs(this.npcTargetCount);
+      }
     }
 
     if (!this.isRush) {
