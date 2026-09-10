@@ -161,6 +161,12 @@ body,
   inset: 0;
 }
 
+:root {
+  --lotador-yellow: #ffc31f;
+  --lotador-orange: #ff9a1f;
+  --lotador-navy: #0b0f1c;
+}
+
 @keyframes lotador-rotate-hint {
   0%,
   100% {
@@ -173,6 +179,45 @@ body,
 
 .lotador-rotate-icon {
   animation: lotador-rotate-hint 1.6s ease-in-out infinite;
+}
+
+.orientation-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(9rem, 42vw, 14rem);
+  min-height: clamp(2.5rem, 12vw, 4.5rem);
+  padding: .45rem .7rem;
+  transform: skew(-7deg) rotate(-2deg);
+  border: .2rem solid var(--lotador-yellow);
+  border-radius: .7rem;
+  background: linear-gradient(145deg, var(--lotador-orange), var(--lotador-yellow));
+  box-shadow: 0 0 1.5rem rgb(255 195 31 / 28%);
+  color: var(--lotador-navy);
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(1.4rem, 7vw, 2.65rem);
+  font-style: italic;
+  letter-spacing: -.08em;
+  line-height: 1;
+  text-shadow: .08em .08em 0 rgb(255 255 255 / 45%);
+}
+
+@media (max-height: 600px) {
+  .orientation-content {
+    gap: clamp(.35rem, 1.4vh, .65rem);
+  }
+
+  .orientation-logo {
+    width: clamp(8rem, 34vw, 10rem);
+    min-height: clamp(2.1rem, 9vw, 3rem);
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .orientation-content {
+    max-width: 24rem;
+  }
 }
 
 @keyframes orientation-radar {
