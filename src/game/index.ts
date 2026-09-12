@@ -13,13 +13,17 @@ export function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: GAME_CONFIG.width,
-    height: GAME_CONFIG.height,
+    // O contentor é full-bleed; RESIZE evita letterbox em qualquer proporção.
+    width: "100%",
+    height: "100%",
     backgroundColor: GAME_CONFIG.backgroundColor,
     pixelArt: false,
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      mode: Phaser.Scale.RESIZE,
+      parent,
+      width: "100%",
+      height: "100%",
+      autoCenter: Phaser.Scale.NO_CENTER,
     },
     physics: {
       default: "arcade",
