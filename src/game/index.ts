@@ -14,17 +14,15 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     type: Phaser.AUTO,
     parent,
     // O contentor é full-bleed; RESIZE evita letterbox em qualquer proporção.
-    // RESIZE mantém estes valores apenas como dimensão inicial; depois o
-    // canvas usa o tamanho físico do contentor sem transform CSS ou zoom.
-    width: GAME_CONFIG.width,
-    height: GAME_CONFIG.height,
+    width: "100%",
+    height: "100%",
     backgroundColor: GAME_CONFIG.backgroundColor,
     pixelArt: false,
     scale: {
       mode: Phaser.Scale.RESIZE,
       parent,
-      width: GAME_CONFIG.width,
-      height: GAME_CONFIG.height,
+      width: "100%",
+      height: "100%",
       autoCenter: Phaser.Scale.NO_CENTER,
     },
     physics: {

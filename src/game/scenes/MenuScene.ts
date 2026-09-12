@@ -24,11 +24,10 @@ export class MenuScene extends Phaser.Scene {
     const bg = this.add.image(width / 2, height / 2 + 40, "ground").setAlpha(0.4);
     bg.setDisplaySize(width * 1.1, (width * 1.1 * MAP_CONFIG.height) / MAP_CONFIG.width);
 
-    const compact = width < 760 || height < 500;
     this.add
-      .text(width / 2, compact ? 42 : 74, "LOTADOR", {
+      .text(width / 2, 74, "LOTADOR", {
         fontFamily: "Impact, 'Arial Black', sans-serif",
-        fontSize: `${Phaser.Math.Clamp(Math.min(width * 0.105, height * 0.14), 42, 72)}px`,
+        fontSize: "72px",
         color: HEX.yellow,
       })
       .setOrigin(0.5)
@@ -36,7 +35,7 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .text(width / 2, 122, "CHAMA, LOTA, GANHA", {
         fontFamily: "'Trebuchet MS', sans-serif",
-        fontSize: `${Phaser.Math.Clamp(width * 0.025, 13, 17)}px`,
+        fontSize: "17px",
         color: HEX.white,
       })
       .setOrigin(0.5);
@@ -56,7 +55,7 @@ export class MenuScene extends Phaser.Scene {
 
   private button(y: number, label: string, onClick: () => void, primary = false): void {
     const { width } = this.scale;
-    const w = Math.min(primary ? 320 : 280, this.scale.width - 32);
+    const w = primary ? 320 : 280;
     const bg = this.add
       .rectangle(width / 2, y, w, primary ? 62 : 48, primary ? 0xffc31f : 0x16305c, 0.96)
       .setStrokeStyle(3, 0x0e1a33)
@@ -96,32 +95,29 @@ export class MenuScene extends Phaser.Scene {
     const save = SaveManager.load();
 
     if (this.panel === "MENU") {
-      const compact = width < 760 || height < 500;
-      const buttonStart = compact ? 142 : 226;
-      const buttonGap = compact ? 43 : 52;
       this.label(
         width / 2,
-        compact ? 104 : 168,
+        168,
         `NÍVEL ${save.level} · ${levelTitle(save.level)} · ${save.money} Kz · RECORDE ${save.bestScore} Kz`,
         16,
         HEX.gold,
       );
-      this.button(buttonStart, save.tutorialDone ? "JOGAR" : "TUTORIAL", () => {
+      this.button(226, save.tutorialDone ? "JOGAR" : "TUTORIAL", () => {
         this.registry.set("tutorial", !save.tutorialDone);
         this.scene.start("Game");
       }, true);
-      this.button(buttonStart + buttonGap, save.tutorialDone ? "REPETIR TUTORIAL" : "MISSÕES", () => {
+      this.button(292, save.tutorialDone ? "REPETIR TUTORIAL" : "MISSÕES", () => {
         if (save.tutorialDone) {
           this.registry.set("tutorial", true);
           this.scene.start("Game");
         } else this.go("MISSOES");
       });
-      this.button(buttonStart + buttonGap * 2, "GESTÃO", () => this.go("GESTAO"));
-      this.button(buttonStart + buttonGap * 3, "PERSONAGEM", () => this.scene.start("Character"));
-      this.button(buttonStart + buttonGap * 4, "DEFINIÇÕES", () => this.go("DEFINICOES"));
-      this.button(buttonStart + buttonGap * 5, "SAIR DO JOGO", () => this.go("SAIDA"));
+      this.button(344, "GESTÃO", () => this.go("GESTAO"));
+      this.button(396, "PERSONAGEM", () => this.scene.start("Character"));
+      this.button(448, "DEFINIÇÕES", () => this.go("DEFINICOES"));
+      this.button(500, "SAIR DO JOGO", () => this.go("SAIDA"));
       this.label(width / 2, height - 26, "WASD mover · SHIFT correr · E interagir · ESPAÇO chamar · Q power-up", 13, HEX.muted);
-      if (width >= 760 && height >= 500) this.buildControlGuide(width, height);
+      this.buildControlGuide(width, height);
       return;
     }
 
