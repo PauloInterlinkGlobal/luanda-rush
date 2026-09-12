@@ -24,7 +24,7 @@ export class PauseScene extends Phaser.Scene {
   private button(y: number, label: string, onClick: () => void, primary = false): void {
     const { width } = this.scale;
     const bg = this.add
-      .rectangle(width / 2, y, primary ? 320 : 280, primary ? 58 : 46, primary ? 0xffc31f : 0x16305c, 0.96)
+      .      rectangle(width / 2, y, Math.min(primary ? 320 : 280, width - 32), primary ? 58 : 46, primary ? 0xffc31f : 0x16305c, 0.96)
       .setStrokeStyle(3, 0x0e1a33)
       .setInteractive({ useHandCursor: true });
     const t = this.add
@@ -71,19 +71,23 @@ export class PauseScene extends Phaser.Scene {
       return;
     }
 
-    this.title(120, "PAUSA", 56, HEX.yellow);
-    this.button(210, "CONTINUAR", () => this.resume(), true);
-    this.button(286, `MÚSICA: ${s.music ? "LIGADA" : "DESLIGADA"}`, () => {
+    const compact = this.scale.width < 760 || height < 500;
+    const titleY = compact ? 64 : 120;
+    const startY = compact ? 128 : 210;
+    const gap = compact ? 54 : 76;
+    this.title(titleY, "PAUSA", compact ? 42 : 56, HEX.yellow);
+    this.button(startY, "CONTINUAR", () => this.resume(), true);
+    this.button(startY + gap, `MÚSICA: ${s.music ? "LIGADA" : "DESLIGADA"}`, () => {
       SaveManager.update({ settings: { ...s, music: !s.music } });
       audio.musicEnabled = !s.music;
       this.render();
     });
-    this.button(344, `EFEITOS: ${s.sfx ? "LIGADOS" : "DESLIGADOS"}`, () => {
+    this.button(startY + gap * 2, `EFEITOS: ${s.sfx ? "LIGADOS" : "DESLIGADOS"}`, () => {
       SaveManager.update({ settings: { ...s, sfx: !s.sfx } });
       audio.sfxEnabled = !s.sfx;
       this.render();
     });
-    this.button(402, "SAIR DA PARTIDA", () => {
+    this.button(startY + gap * 3, "SAIR DA PARTIDA", () => {
       this.confirming = true;
       this.render();
     });
