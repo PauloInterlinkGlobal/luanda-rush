@@ -196,6 +196,15 @@ export class HUDScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-ESC", () => {
       if (!this.isPaused) this.events.emit("hud-pause");
     });
+
+    // O HUD é reconstruído no resize para recalcular todas as âncoras reais.
+    const refreshLayout = () => {
+      if (this.scene.isActive()) this.scene.restart();
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, refreshLayout);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, refreshLayout);
+    });
   }
 
   /** Cartão escuro compacto com cantos arredondados (fundo do HUD). */

@@ -33,7 +33,7 @@ export default function GameCanvas() {
 
   return (
     <OrientationGate>
-      <div ref={ref} className="h-[100dvh] w-[100dvw]" />
+      <div ref={ref} className="game-canvas-root" aria-label="Jogo Lotador" />
     </OrientationGate>
   );
 }
