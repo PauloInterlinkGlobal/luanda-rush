@@ -72,18 +72,28 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
     this.cameras.main.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
-    this.cameras.main.setViewport(0, 0, this.scale.width, this.scale.height);
     this.cameras.main.setBackgroundColor(COLORS.night);
-    // RESIZE altera o viewport real; reaplica-o sem tocar nos limites do mapa.
+
     const resizeCamera = (gameSize: Phaser.Structs.Size) => {
+      const referenceHeight = GAME_CONFIG.height;
+      // Escala uniforme pela altura: ecrãs largos mostram mais mapa em vez de
+      // esticar personagens, táxis ou props num único eixo.
+      const zoom = Phaser.Math.Clamp(gameSize.height / referenceHeight, 0.62, 1.35);
       this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
+      this.cameras.main.setZoom(zoom);
       this.cameras.main.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
+      this.cameras.main.centerOn(this.player?.x ?? MAP_CONFIG.playerSpawn.x, this.player?.y ?? MAP_CONFIG.playerSpawn.y);
     };
+    resizeCamera(new Phaser.Structs.Size(this.scale.width, this.scale.height));
     this.scale.on(Phaser.Scale.Events.RESIZE, resizeCamera);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, resizeCamera);
     });
-    this.add.image(0, 0, "ground").setOrigin(0).setDepth(0);
+    this.add
+      .image(0, 0, "ground")
+      .setOrigin(0)
+      .setDisplaySize(MAP_CONFIG.width, MAP_CONFIG.height)
+      .setDepth(0);
 
     this.buildProps();
 

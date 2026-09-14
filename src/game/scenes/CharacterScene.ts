@@ -70,7 +70,11 @@ export class CharacterScene extends Phaser.Scene {
   /** Reconstrói a textura do jogador com a aparência actual. */
   private rebuild(): void {
     this.preview.anims.stop();
-    this.preview.setTexture("__MISSING");
+    // A textura sentinela anterior não existe no TextureManager. Usar um
+    // placeholder real impede que Phaser mantenha um Frame com source nulo
+    // enquanto as animações do jogador são reconstruídas.
+    const safeTexture = AssetManager.ensureTexture(this, "player_rebuild_placeholder");
+    this.preview.setTexture(safeTexture, 0);
     AssetManager.rebuildPlayer(this, this.skin);
     this.preview.setTexture("player", 0);
     this.playPreview();
