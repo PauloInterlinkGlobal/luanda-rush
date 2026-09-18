@@ -20,6 +20,9 @@ function defaults(): SaveData {
     tutorialDone: false,
     fleetLevel: 1,
     stationLevel: 1,
+    unlockedLevel: 1,
+    completedLevels: [],
+    levelStars: {},
     unlockedMaps: ["bairro"],
     settings: {
       music: true,
@@ -52,6 +55,8 @@ export class SaveManager {
         upgrades: { ...base.upgrades, ...(parsed.upgrades ?? {}) },
         character: { ...base.character, ...(parsed.character ?? {}) },
         missions: { ...base.missions, ...(parsed.missions ?? {}) },
+        completedLevels: Array.isArray(parsed.completedLevels) ? parsed.completedLevels : base.completedLevels,
+        levelStars: { ...base.levelStars, ...(parsed.levelStars ?? {}) },
         settings: { ...base.settings, ...(parsed.settings ?? {}) },
         version: VERSION,
       };

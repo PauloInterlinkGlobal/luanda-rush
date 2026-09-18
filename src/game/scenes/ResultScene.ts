@@ -3,12 +3,16 @@ import { FONT, HEX } from "../config/GameConfig";
 import { SaveManager, levelTitle } from "../systems/SaveManager";
 import { layoutOf, relayoutOnResize, type Layout } from "../systems/Responsive";
 import type { MatchStats } from "../types";
+import { getLevel, levelObjectiveText } from "../data/levels";
+import type { LevelResult } from "../systems/ProgressionManager";
 
 /** Ecrã de resultado do turno — distribuído pelo espaço real do ecrã. */
 export class ResultScene extends Phaser.Scene {
   private stats!: MatchStats;
   private won: boolean | null = null;
   private tutorial = false;
+  private level = 1;
+  private result: LevelResult | null = null;
   private L!: Layout;
   private layer!: Phaser.GameObjects.Container;
 
@@ -16,10 +20,12 @@ export class ResultScene extends Phaser.Scene {
     super("Result");
   }
 
-  init(data: { stats: MatchStats; won?: boolean | null; tutorial?: boolean }): void {
+  init(data: { stats: MatchStats; won?: boolean | null; tutorial?: boolean; level?: number; result?: LevelResult | null }): void {
     this.stats = data.stats;
     this.won = data.won ?? null;
     this.tutorial = data.tutorial === true;
+    this.level = data.level ?? 1;
+    this.result = data.result ?? null;
   }
 
   create(): void {
@@ -97,7 +103,10 @@ export class ResultScene extends Phaser.Scene {
       headerBottom += l.s(30);
     }
 
+    const level = getLevel(this.level);
+    const objectiveLines = this.tutorial ? [] : levelObjectiveText(level, this.stats);
     const lines = [
+      ...(this.tutorial ? [] : [`FASE ${level.id} · ${level.name} · ${level.rank}`, `ESTRELAS: ${"★".repeat(this.result?.stars ?? 0)}${"☆".repeat(3 - (this.result?.stars ?? 0))}`, ...objectiveLines]),
       `Objetivos: ${this.stats.objectivesCompleted}/${this.stats.objectivesTotal}`,
       `Kz ganho: ${this.stats.money}`,
       `Táxis lotados: ${this.stats.taxisFilled}`,
@@ -147,7 +156,11 @@ export class ResultScene extends Phaser.Scene {
     this.btn(
       buttonsTop + btnH / 2,
       this.tutorial && !this.won ? "TENTAR NOVAMENTE" : "JOGAR OUTRA VEZ",
-      () => this.scene.start("Game"),
+      () => {
+        this.registry.set("level", this.level);
+        this.registry.set("tutorial", false);
+        this.scene.start("Game");
+      },
     );
     this.btn(
       buttonsTop + btnH * 1.5 + l.s(10),

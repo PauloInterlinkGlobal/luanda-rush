@@ -154,6 +154,9 @@ export interface SaveData {
   tutorialDone: boolean;
   fleetLevel: number;
   stationLevel: number;
+  unlockedLevel: number;
+  completedLevels: number[];
+  levelStars: Record<string, number>;
   unlockedMaps: string[];
   settings: GameSettings;
 }

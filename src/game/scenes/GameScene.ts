@@ -19,6 +19,8 @@ import { PowerUpManager } from "../systems/PowerUpManager";
 import { SaveManager } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
 import { PassengerState, PowerUpType, TaxiState, TaxiType, type SaveData } from "../types";
+import { getLevel, type LevelConfig } from "../data/levels";
+import { ProgressionManager } from "../systems/ProgressionManager";
 import { layoutOf, onResize } from "../systems/Responsive";
 
 const NPC_SHEETS = ["npc_kito", "npc_manuel", "npc_debora"];
@@ -26,6 +28,8 @@ const NPC_SHEETS = ["npc_kito", "npc_manuel", "npc_debora"];
 /** Cena principal: o turno de 3 minutos na paragem. */
 export class GameScene extends Phaser.Scene {
   private save!: SaveData;
+  levelNumber = 1;
+  levelConfig!: LevelConfig;
   player!: Player;
   npcs: LotadorNPC[] = [];
   pedestrians: Pedestrian[] = [];
@@ -59,7 +63,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.paused = false;
     this.tutorialMode = this.registry.get("tutorial") === true;
-    this.timeLeft = this.tutorialMode ? BALANCE.tutorialMatchDuration : BALANCE.matchDuration;
+    this.timeLeft = this.tutorialMode ? BALANCE.tutorialMatchDuration : this.levelConfig.duration;
     this.paused = this.tutorialMode;
     this.tutorialTimerStarted = false;
     this.wasRunning = false;
@@ -68,6 +72,8 @@ export class GameScene extends Phaser.Scene {
     this.powerUps.reset();
 
     this.save = SaveManager.load();
+    this.levelNumber = Math.max(1, Number(this.registry.get("level") ?? this.save.unlockedLevel ?? 1));
+    this.levelConfig = getLevel(this.levelNumber);
     audio.sfxEnabled = this.save.settings.sfx;
     audio.musicEnabled = this.save.settings.music;
 
@@ -115,7 +121,7 @@ export class GameScene extends Phaser.Scene {
       audio.reward();
     };
 
-    if (!this.tutorialMode) this.spawnNpcs(this.difficulty.current.npcCount);
+    if (!this.tutorialMode) this.spawnNpcs(Math.min(this.levelConfig.rivals, this.difficulty.current.npcCount));
     this.spawnPedestrians();
     if (this.tutorialMode) {
       // Nível 1: cenário determinístico — 1 táxi, 1 passageiro, 0 rivais.
@@ -126,9 +132,10 @@ export class GameScene extends Phaser.Scene {
       this.tutorialCtl = new TutorialController(this);
     } else {
       this.spawns.spawnTaxi(TaxiType.NORMAL);
-      for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) {
+      for (let i = 0; i < this.levelConfig.passengers; i++) {
         this.spawns.spawnPassenger();
       }
+      for (let i = 1; i < this.levelConfig.taxis; i++) this.spawns.spawnTaxi(TaxiType.NORMAL);
     }
 
     this.setupInput();
@@ -503,7 +510,7 @@ export class GameScene extends Phaser.Scene {
     if (this.tutorialMode) {
       this.ensureTutorialWorld();
     } else {
-      this.spawnNpcs(Math.min(d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
+      this.spawnNpcs(Math.min(this.levelConfig.rivals, d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
     }
 
     if (!this.isRush) {
@@ -585,11 +592,11 @@ export class GameScene extends Phaser.Scene {
       objectivesCompleted: this.missions.progress.filter((mission) => mission.done).length,
       promoted: this.missions.progress.length > 0 && this.missions.progress.every((mission) => mission.done),
     };
-    const patch: Partial<SaveData> = {
-      money: save.money + stats.money,
-      missions,
-      bestScore: Math.max(save.bestScore, stats.money),
-    };
+    const patch: Partial<SaveData> = { missions };
+    if (this.tutorialMode) {
+      patch.money = save.money + stats.money;
+      patch.bestScore = Math.max(save.bestScore, stats.money);
+    }
     if (this.tutorialMode && won === true) {
       patch.tutorialDone = true;
       // Limpa a flag do registo para que "JOGAR OUTRA VEZ" inicie um jogo
@@ -598,6 +605,7 @@ export class GameScene extends Phaser.Scene {
     }
     SaveManager.update(patch);
     this.scene.stop("HUD");
-    this.scene.start("Result", { stats, won: won ?? null, tutorial: this.tutorialMode });
+    const result = this.tutorialMode ? null : ProgressionManager.complete(this.levelNumber, stats, this.timeLeft);
+    this.scene.start("Result", { stats, won: this.tutorialMode ? won ?? null : result!.stars > 0, tutorial: this.tutorialMode, level: this.levelNumber, result });
   }
 }
