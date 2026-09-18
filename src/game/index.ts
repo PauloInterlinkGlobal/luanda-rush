@@ -19,12 +19,19 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     backgroundColor: GAME_CONFIG.backgroundColor,
     pixelArt: false,
     scale: {
+      // RESIZE: o canvas assume exactamente a largura/altura úteis do
+      // dispositivo. Nunca há letterbox nem esticamento não uniforme —
+      // a adaptação é feita por escala uniforme dentro de cada cena.
       mode: Phaser.Scale.RESIZE,
       parent,
       width: "100%",
       height: "100%",
       autoCenter: Phaser.Scale.NO_CENTER,
+      expandParent: true,
+      autoRound: true,
     },
+    // Acompanha barras móveis do browser e mudanças de orientação sem recarregar.
+    disableContextMenu: true,
     physics: {
       default: "arcade",
       arcade: { gravity: { x: 0, y: 0 }, debug: GAME_CONFIG.physicsDebug },
