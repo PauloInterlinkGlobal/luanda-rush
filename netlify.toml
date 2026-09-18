@@ -1,0 +1,7 @@
+# Nitro (bundled by @lovable.dev/vite-tanstack-config) auto-detects the Netlify
+# preset during CI builds, which emits the static client into `dist/` and the SSR
+# handler into `.netlify/functions-internal/server/`. The `dist/client` layout only
+# applies to the Lovable sandbox build, which targets Cloudflare.
+[build]
+  command = "bun run build"
+  publish = "dist"
