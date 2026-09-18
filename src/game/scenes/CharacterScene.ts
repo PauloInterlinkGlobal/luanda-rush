@@ -363,11 +363,24 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   private exit(save = false): void {
-    if (save) {
-      SaveManager.update({ character: this.skin, playerName: this.playerName });
-    } else {
-      const stored = SaveManager.load();
-      AssetManager.rebuildPlayer(this, stored.character);
+    // A navegação para o menu NUNCA pode falhar: se a reconstrução da
+    // personagem rebentar por algum motivo, o jogador volta na mesma.
+    try {
+      if (save) {
+        SaveManager.update({ character: this.skin, playerName: this.playerName });
+      } else {
+        // Anula as alterações ao reconstruir o jogador com o save guardado.
+        // O preview tem de largar a textura/animação "player" ANTES, como no
+        // rebuild(): remover animações/texturas em uso derruba o Phaser e
+        // impedia que este botão chegasse ao `scene.start("Menu")`.
+        this.preview.anims.stop();
+        const safeTexture = AssetManager.ensureTexture(this, "player_rebuild_placeholder");
+        this.preview.setTexture(safeTexture, 0);
+        const stored = SaveManager.load();
+        AssetManager.rebuildPlayer(this, stored.character);
+      }
+    } catch (err) {
+      console.warn("[CharacterScene] falha ao preparar saída — a voltar ao menu", err);
     }
     this.scene.start("Menu");
   }
