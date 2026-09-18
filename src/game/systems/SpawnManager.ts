@@ -23,13 +23,23 @@ function weightedPick<T>(entries: [T, number][]): T {
 export class SpawnManager {
   passengers: Passenger[] = [];
   taxis: Taxi[] = [];
+  /**
+   * Grupo físico dos táxis activos. A cena colide-o com o jogador para que
+   * os táxis se comportem como paredes (imóveis mas sólidos); quando um táxi
+   * é destruído o grupo remove-o automaticamente.
+   */
+  readonly taxiGroup: Phaser.Physics.Arcade.Group;
 
   private passengerTimer = 0;
   private taxiTimer = 1.2;
   /** No tutorial (nível 1) desliga-se: nada nasce sem ser pedido pela cena. */
   autoSpawn = true;
 
-  constructor(private readonly scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene) {
+    // O grupo aplica os seus defaults ao adicionar membros; `immovable`
+    // tem de ficar aqui para não anular o `setImmovable(true)` do Taxi.
+    this.taxiGroup = scene.physics.add.group({ immovable: true });
+  }
 
   /** Destinos actualmente servidos por táxis à espera. */
   private activeDestinations(): Destination[] {
@@ -74,6 +84,7 @@ export class SpawnManager {
     const type = forceType ?? (weightedPick(TAXI_WEIGHTS) as TaxiType);
     const destination = DESTINATIONS[Math.floor(Math.random() * DESTINATIONS.length)]!;
     const taxi = new Taxi(this.scene, type, destination, slot);
+    this.taxiGroup.add(taxi);
     this.taxis.push(taxi);
     return taxi;
   }

@@ -105,6 +105,9 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
 
     this.spawns = new SpawnManager(this);
+    // Os táxis são sólidos: o jogador não os atravessa — contorna-os como
+    // se fossem paredes (o corpo do táxi é imóvel, não é empurrado).
+    this.physics.add.collider(this.player, this.spawns.taxiGroup);
     this.difficulty = new DifficultyManager(this.save.level);
     this.missions = new MissionManager({}, this.tutorialMode ? TUTORIAL_MISSIONS : MISSIONS);
     this.missions.onComplete = (m) => {
