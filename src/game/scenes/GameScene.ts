@@ -63,8 +63,6 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.paused = false;
     this.tutorialMode = this.registry.get("tutorial") === true;
-    this.timeLeft = this.tutorialMode ? BALANCE.tutorialMatchDuration : this.levelConfig.duration;
-    this.paused = this.tutorialMode;
     this.tutorialTimerStarted = false;
     this.wasRunning = false;
     this.combo.reset();
@@ -72,8 +70,11 @@ export class GameScene extends Phaser.Scene {
     this.powerUps.reset();
 
     this.save = SaveManager.load();
-    this.levelNumber = Math.max(1, Number(this.registry.get("level") ?? this.save.unlockedLevel ?? 1));
+    const requestedLevel = Number(this.registry.get("level") ?? this.save.unlockedLevel ?? 1);
+    this.levelNumber = Number.isFinite(requestedLevel) ? Math.max(1, Math.floor(requestedLevel)) : 1;
     this.levelConfig = getLevel(this.levelNumber);
+    this.timeLeft = this.tutorialMode ? BALANCE.tutorialMatchDuration : this.levelConfig.duration;
+    this.paused = this.tutorialMode;
     audio.sfxEnabled = this.save.settings.sfx;
     audio.musicEnabled = this.save.settings.music;
 
