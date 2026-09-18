@@ -19,6 +19,7 @@ import { PowerUpManager } from "../systems/PowerUpManager";
 import { SaveManager } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
 import { PassengerState, PowerUpType, TaxiState, TaxiType, type SaveData } from "../types";
+import { layoutOf, onResize } from "../systems/Responsive";
 
 const NPC_SHEETS = ["npc_kito", "npc_manuel", "npc_debora"];
 
@@ -74,21 +75,12 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
     this.cameras.main.setBackgroundColor(COLORS.night);
 
-    const resizeCamera = (gameSize: Phaser.Structs.Size) => {
-      const referenceHeight = GAME_CONFIG.height;
-      // Escala uniforme pela altura: ecrãs largos mostram mais mapa em vez de
-      // esticar personagens, táxis ou props num único eixo.
-      const zoom = Phaser.Math.Clamp(gameSize.height / referenceHeight, 0.62, 1.35);
-      this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
-      this.cameras.main.setZoom(zoom);
-      this.cameras.main.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
-      this.cameras.main.centerOn(this.player?.x ?? MAP_CONFIG.playerSpawn.x, this.player?.y ?? MAP_CONFIG.playerSpawn.y);
-    };
-    resizeCamera(new Phaser.Structs.Size(this.scale.width, this.scale.height));
-    this.scale.on(Phaser.Scale.Events.RESIZE, resizeCamera);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, resizeCamera);
-    });
+    // ---------------------------------------------------------------- câmara
+    // Escala uniforme pela altura de referência: ecrãs largos passam a mostrar
+    // MAIS cenário, em vez de esticar personagens, táxis ou props.
+    this.applyCameraLayout();
+    onResize(this, () => this.applyCameraLayout());
+
     this.add
       .image(0, 0, "ground")
       .setOrigin(0)
@@ -156,6 +148,26 @@ export class GameScene extends Phaser.Scene {
       // não disparem sobre uma cena já destruída.
       this.tutorialCtl = null;
     });
+  }
+
+  /**
+   * Ajusta viewport + zoom da câmara ao tamanho real do ecrã.
+   * O zoom é único (X = Y), logo nada fica achatado nem alongado; o limite
+   * inferior garante ainda que a área visível nunca ultrapassa o mapa
+   * (sem faixas vazias nas extremidades).
+   */
+  private applyCameraLayout(): void {
+    const cam = this.cameras.main;
+    const l = layoutOf(this);
+    // Zoom mínimo para o mapa cobrir sempre todo o ecrã (sem barras).
+    const minZoom = Math.max(l.width / MAP_CONFIG.width, l.height / MAP_CONFIG.height);
+    const zoom = Math.max(minZoom, Phaser.Math.Clamp(l.scale, 0.62, 1.35));
+    cam.setViewport(0, 0, l.width, l.height);
+    cam.setZoom(zoom);
+    cam.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
+    // Recentrar preserva os limites do mapa e evita saltos perto das bordas.
+    const target = this.player ?? MAP_CONFIG.playerSpawn;
+    cam.centerOn(target.x, target.y);
   }
 
   // ---------------------------------------------------------------- mapa
