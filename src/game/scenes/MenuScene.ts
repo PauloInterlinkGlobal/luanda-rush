@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { FONT, HEX } from "../config/GameConfig";
-import { SaveManager, levelTitle } from "../systems/SaveManager";
+import { SaveManager } from "../systems/SaveManager";
+import { ProgressionManager } from "../systems/ProgressionManager";
 import { audio } from "../systems/AudioManager";
 import { MISSIONS, UPGRADES } from "../data/missions";
 import { coverUniform, layoutOf, relayoutOnResize, type Layout } from "../systems/Responsive";
@@ -22,6 +23,14 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.quitting = false;
+    // Painel pedido por outra cena (ex.: LevelSelect → GESTÃO)
+    const open = this.registry.get("openPanel") as Panel | undefined;
+    if (open) {
+      this.panel = open;
+      this.registry.set("openPanel", null);
+    } else {
+      this.panel = "MENU";
+    }
     this.backdrop = this.add.container(0, 0);
     this.layer = this.add.container(0, 0);
     this.build(layoutOf(this));
@@ -179,18 +188,18 @@ export class MenuScene extends Phaser.Scene {
     }
 
     if (this.panel === "GESTAO") {
-      this.label(l.cx, inner(0.06), "GESTÃO DA OPERAÇÃO", 24, HEX.yellow);
+      this.label(l.cx, inner(0.06), "UPGRADES DO LOTADOR", 24, HEX.yellow);
       this.label(
         l.cx,
         inner(0.14),
-        `CAIXA ${save.money} Kz · FROTA NÍVEL ${save.fleetLevel} · PARAGEM NÍVEL ${save.stationLevel}`,
+        `CAIXA ${save.money} Kz · PARAGEM NÍVEL ${save.stationLevel} · FASE ${save.unlockedPhase ?? 1}`,
         13,
         HEX.muted,
       );
       const step = panelH * 0.14;
       UPGRADES.forEach((upgrade, i) => {
         const level = save.upgrades[upgrade.id] ?? 0;
-        const cost = upgrade.baseCost * (level + 1);
+        const cost = ProgressionManager.upgradeCost(upgrade.id, level);
         const y = inner(0.26) + i * step;
         this.label(
           l.cx - panelW / 2 + l.s(20),
@@ -200,16 +209,19 @@ export class MenuScene extends Phaser.Scene {
           HEX.white,
           0,
         );
+        this.label(
+          l.cx - panelW / 2 + l.s(20),
+          y + l.s(14),
+          upgrade.description,
+          10,
+          HEX.muted,
+          0,
+        );
         this.button(
           y,
           level >= upgrade.maxLevel ? "MAX" : `${cost} Kz`,
           () => {
-            if (level >= upgrade.maxLevel || save.money < cost) return;
-            SaveManager.update({
-              money: save.money - cost,
-              upgrades: { ...save.upgrades, [upgrade.id]: level + 1 },
-            });
-            this.render();
+            if (ProgressionManager.buyUpgrade(upgrade.id)) this.render();
           },
           false,
           l.cx + panelW / 4,
@@ -292,33 +304,41 @@ export class MenuScene extends Phaser.Scene {
     const sideGuide = l.innerWidth >= l.s(880) && l.innerHeight >= l.s(420);
     const compactGuide = !sideGuide;
 
+    const xp = ProgressionManager.xpProgress(save);
+    const unlocked = ProgressionManager.unlockedPhase(save);
     this.label(
       l.cx,
       l.top + l.s(104),
-      `NÍVEL ${save.level} · ${levelTitle(save.level)} · ${save.money} Kz · RECORDE ${save.bestScore} Kz`,
-      15,
+      `NÍVEL ${xp.level} · ${xp.title} · FASE ${unlocked} · ${save.money} Kz · ★ ${ProgressionManager.totalStars(save)}`,
+      14,
       HEX.gold,
     );
 
     const entries: { label: string; action: () => void; primary?: boolean }[] = [
       {
-        label: save.tutorialDone ? "JOGAR" : "TUTORIAL",
+        label: save.tutorialDone || unlocked > 1 ? "JOGAR · FASES" : "TUTORIAL · FASE 1",
         primary: true,
         action: () => {
-          this.registry.set("tutorial", !save.tutorialDone);
-          this.scene.start("Game");
+          if (!save.tutorialDone && unlocked <= 1) {
+            this.registry.set("phase", 1);
+            this.registry.set("tutorial", true);
+            this.scene.start("Game");
+          } else {
+            this.scene.start("LevelSelect");
+          }
         },
       },
       {
-        label: save.tutorialDone ? "REPETIR TUTORIAL" : "MISSÕES",
+        label: "CONTINUAR",
         action: () => {
-          if (save.tutorialDone) {
-            this.registry.set("tutorial", true);
-            this.scene.start("Game");
-          } else this.go("MISSOES");
+          const phase = Math.min(unlocked, 20);
+          this.registry.set("phase", phase);
+          this.registry.set("tutorial", phase === 1 && !save.tutorialDone);
+          this.scene.start("Game");
         },
       },
-      { label: "GESTÃO", action: () => this.go("GESTAO") },
+      { label: "UPGRADES", action: () => this.go("GESTAO") },
+      { label: "MISSÕES", action: () => this.go("MISSOES") },
       { label: "PERSONAGEM", action: () => this.scene.start("Character") },
       { label: "DEFINIÇÕES", action: () => this.go("DEFINICOES") },
       { label: "SAIR DO JOGO", action: () => this.go("SAIDA") },

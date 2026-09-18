@@ -106,9 +106,12 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private quit(): void {
+    const game = this.scene.get("Game") as { levelMgr?: { phaseId: number } | null };
+    const hadPhase = !!game?.levelMgr;
     this.scene.stop("HUD");
     this.scene.stop("Game");
     this.scene.stop();
-    this.scene.start("Menu");
+    // Volta ao mapa de fases se estava numa fase de campanha
+    this.scene.start(hadPhase ? "LevelSelect" : "Menu");
   }
 }

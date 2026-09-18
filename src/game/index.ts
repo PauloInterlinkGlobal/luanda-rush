@@ -7,6 +7,7 @@ import { HUDScene } from "./scenes/HUDScene";
 import { ResultScene } from "./scenes/ResultScene";
 import { CharacterScene } from "./scenes/CharacterScene";
 import { PauseScene } from "./scenes/PauseScene";
+import { LevelSelectScene } from "./scenes/LevelSelectScene";
 
 /** Cria a instância Phaser dentro do contentor indicado (apenas no browser). */
 export function createGame(parent: HTMLElement): Phaser.Game {
@@ -36,6 +37,15 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       default: "arcade",
       arcade: { gravity: { x: 0, y: 0 }, debug: GAME_CONFIG.physicsDebug },
     },
-    scene: [BootScene, MenuScene, CharacterScene, GameScene, HUDScene, PauseScene, ResultScene],
+    scene: [
+      BootScene,
+      MenuScene,
+      LevelSelectScene,
+      CharacterScene,
+      GameScene,
+      HUDScene,
+      PauseScene,
+      ResultScene,
+    ],
   });
 }

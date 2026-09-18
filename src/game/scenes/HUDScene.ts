@@ -41,6 +41,11 @@ export class HUDScene extends Phaser.Scene {
   private objPanel!: Phaser.GameObjects.Container;
   private objPanelItems: { label: Phaser.GameObjects.Text; status: Phaser.GameObjects.Text }[] = [];
   private powerDot!: Phaser.GameObjects.Arc;
+  /** Painel compacto de fase (objectivos em tempo real). */
+  private phaseTitle!: Phaser.GameObjects.Text;
+  private phaseLines: Phaser.GameObjects.Text[] = [];
+  private phaseStars!: Phaser.GameObjects.Text;
+  private phaseCard!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("HUD");
@@ -126,6 +131,7 @@ export class HUDScene extends Phaser.Scene {
     });
     this.registry.set("objectivesOpen", false);
     this.buildObjectivesPanel(objY + objH + s(6));
+    this.buildPhaseHud(objY + objH + s(6));
 
     // ---------------- canto superior direito: [💰 Kz | ⏱ tempo] [Ⅱ]
     const pauseR = Math.max(16, s(15));
@@ -264,14 +270,15 @@ export class HUDScene extends Phaser.Scene {
     return g;
   }
 
-  /** Painel de objetivos (dados reais do MissionManager), aberto pelo botão OBJ. */
+  /** Painel de objetivos (fase ou missões), aberto pelo botão OBJ. */
   private buildObjectivesPanel(topY: number): void {
     const l = this.L;
-    const missions = this.game_.missions.progress;
-    const w = Math.min(l.s(262), l.innerWidth * 0.6);
+    const levelObjs = this.game_.levelMgr?.objectives.progress;
+    const rows = levelObjs ?? this.game_.missions.progress;
+    const w = Math.min(l.s(280), l.innerWidth * 0.62);
     const rowH = l.s(22);
     const pad = l.s(10);
-    const h = missions.length * rowH + pad * 2;
+    const h = Math.max(1, rows.length) * rowH + pad * 2;
     const container = this.add.container(l.left, topY).setDepth(1500).setVisible(false);
     const bg = this.add.graphics();
     bg.fillStyle(0x0e1a33, 0.94);
@@ -279,10 +286,11 @@ export class HUDScene extends Phaser.Scene {
     bg.lineStyle(2, 0xffc31f, 0.6);
     bg.strokeRoundedRect(0, 0, w, h, 12);
     container.add(bg);
-    missions.forEach((m, i) => {
+    rows.forEach((m, i) => {
       const cy = pad + i * rowH + rowH / 2;
+      const name = "def" in m ? m.def.label : (m as { def: { label: string } }).def.label;
       const label = this.add
-        .text(pad, cy, m.def.label, {
+        .text(pad, cy, name, {
           fontFamily: FONT.display,
           fontSize: l.font(11),
           color: HEX.white,
@@ -295,6 +303,66 @@ export class HUDScene extends Phaser.Scene {
       this.objPanelItems.push({ label, status });
     });
     this.objPanel = container;
+  }
+
+  /**
+   * HUD compacto da fase — canto superior esquerdo, abaixo de OBJ.
+   * Mostra FASE N, objectivos principais e estrelas preview sem cobrir o jogo.
+   */
+  private buildPhaseHud(topY: number): void {
+    const l = this.L;
+    const s = l.s;
+    this.phaseLines = [];
+    const mgr = this.game_.levelMgr;
+    if (!mgr) {
+      // Placeholders invisíveis para o update não falhar
+      this.phaseTitle = this.add.text(0, 0, "").setVisible(false);
+      this.phaseStars = this.add.text(0, 0, "").setVisible(false);
+      this.phaseCard = this.add.graphics().setVisible(false);
+      return;
+    }
+
+    const w = Math.min(s(168), l.innerWidth * 0.38);
+    const maxRows = Math.min(4, mgr.def.objectives.length);
+    const h = s(18) + maxRows * s(14) + s(16);
+    this.phaseCard = this.add.graphics().setScrollFactor(0).setDepth(900);
+    this.phaseCard.fillStyle(0x0e1a33, 0.72);
+    this.phaseCard.fillRoundedRect(l.left, topY, w, h, 10);
+    this.phaseCard.lineStyle(1, 0xffc31f, 0.35);
+    this.phaseCard.strokeRoundedRect(l.left, topY, w, h, 10);
+
+    this.phaseTitle = this.add
+      .text(l.left + s(8), topY + s(4), `FASE ${mgr.phaseId}`, {
+        fontFamily: FONT.display,
+        fontSize: l.font(11),
+        color: HEX.yellow,
+      })
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(901);
+
+    this.phaseStars = this.add
+      .text(l.left + w - s(8), topY + s(4), "☆☆☆", {
+        fontFamily: FONT.display,
+        fontSize: l.font(10),
+        color: HEX.muted,
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(901);
+
+    for (let i = 0; i < maxRows; i++) {
+      const line = this.add
+        .text(l.left + s(8), topY + s(18) + i * s(14), "", {
+          fontFamily: FONT.body,
+          fontSize: l.font(10),
+          color: HEX.white,
+        })
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(901);
+      this.phaseLines.push(line);
+    }
   }
 
   private callBtn!: Phaser.GameObjects.Arc;
@@ -585,15 +653,52 @@ export class HUDScene extends Phaser.Scene {
     this.rushText.setVisible(g.isRush);
     this.powerDot.setVisible(g.powerUps.cooldownRatio(this.time.now) >= 1);
 
-    const done = g.missions.progress.filter((m) => m.done).length;
-    this.objBadge.setText(String(done));
-    if (this.objPanel.visible) {
-      g.missions.progress.forEach((m, i) => {
-        const item = this.objPanelItems[i];
-        if (!item) return;
-        item.status.setText(m.done ? "✓" : `${Math.min(m.current, m.def.goal)}/${m.def.goal}`);
-        item.status.setColor(m.done ? HEX.green : HEX.muted);
-      });
+    // Objectivos: preferir fase, senão missões
+    const levelMgr = g.levelMgr;
+    if (levelMgr) {
+      const snap = levelMgr.hudSnapshot(g.economy.stats, g.combo.level);
+      const done = snap.objectives.filter((o) => o.done).length;
+      this.objBadge.setText(String(done));
+
+      if (this.phaseTitle?.visible !== false && this.phaseTitle?.active) {
+        this.phaseTitle.setText(`FASE ${snap.phaseId}`);
+        const st = snap.starsPreview;
+        this.phaseStars.setText("★".repeat(st) + "☆".repeat(Math.max(0, 3 - st)));
+        this.phaseStars.setColor(st > 0 ? HEX.gold : HEX.muted);
+
+        snap.objectives.slice(0, this.phaseLines.length).forEach((o, i) => {
+          const line = this.phaseLines[i];
+          if (!line) return;
+          const cur = o.inverted ? o.current : Math.min(o.current, o.goal);
+          const icon = o.done ? "✓" : o.failed ? "✗" : "·";
+          // Labels curtos para mobile
+          const short =
+            o.label.length > 10 ? o.label.slice(0, 9) + "…" : o.label;
+          line.setText(`${icon} ${short} ${cur}/${o.goal}`);
+          line.setColor(o.done ? HEX.green : o.failed ? HEX.red : HEX.white);
+        });
+      }
+
+      if (this.objPanel.visible) {
+        snap.objectives.forEach((o, i) => {
+          const item = this.objPanelItems[i];
+          if (!item) return;
+          const cur = o.inverted ? o.current : Math.min(o.current, o.goal);
+          item.status.setText(o.done ? "✓" : o.failed ? "✗" : `${cur}/${o.goal}`);
+          item.status.setColor(o.done ? HEX.green : o.failed ? HEX.red : HEX.muted);
+        });
+      }
+    } else {
+      const done = g.missions.progress.filter((m) => m.done).length;
+      this.objBadge.setText(String(done));
+      if (this.objPanel.visible) {
+        g.missions.progress.forEach((m, i) => {
+          const item = this.objPanelItems[i];
+          if (!item) return;
+          item.status.setText(m.done ? "✓" : `${Math.min(m.current, m.def.goal)}/${m.def.goal}`);
+          item.status.setColor(m.done ? HEX.green : HEX.muted);
+        });
+      }
     }
   }
 }
