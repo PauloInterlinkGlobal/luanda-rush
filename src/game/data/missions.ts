@@ -1,4 +1,5 @@
 import type { MissionDefinition, UpgradeDefinition } from "../types";
+import { UPGRADE_MAX_LEVEL, UPGRADE_PER_LEVEL } from "./levels";
 
 export const MISSIONS: MissionDefinition[] = [
   {
@@ -60,6 +61,7 @@ export const MISSIONS: MissionDefinition[] = [
 /**
  * Objetivos do nível 1 (tutorial): muito simples, avaliados pelo
  * MissionManager contra as estatísticas reais da partida.
+ * Mantidos para compatibilidade; a fase 1 usa LevelManager.objectives.
  */
 export const TUTORIAL_MISSIONS: MissionDefinition[] = [
   {
@@ -91,37 +93,38 @@ export const TUTORIAL_MISSIONS: MissionDefinition[] = [
   },
 ];
 
+/** Upgrades do personagem — 5 níveis, custos progressivos via ProgressionManager. */
 export const UPGRADES: UpgradeDefinition[] = [
   {
     id: "velocidade",
     label: "VELOCIDADE",
-    description: "Corres mais depressa entre passageiros e táxis.",
-    maxLevel: 10,
-    baseCost: 400,
-    perLevel: 0.04,
+    description: "Aumenta a velocidade máxima.",
+    maxLevel: UPGRADE_MAX_LEVEL,
+    baseCost: 300,
+    perLevel: UPGRADE_PER_LEVEL["velocidade"] ?? 0.04,
   },
   {
-    id: "resistencia",
-    label: "RESISTÊNCIA",
-    description: "Mais stamina e recuperação mais rápida.",
-    maxLevel: 10,
-    baseCost: 350,
-    perLevel: 0.08,
+    id: "energia",
+    label: "ENERGIA",
+    description: "Permite correr durante mais tempo.",
+    maxLevel: UPGRADE_MAX_LEVEL,
+    baseCost: 250,
+    perLevel: UPGRADE_PER_LEVEL["energia"] ?? 0.08,
   },
   {
-    id: "voz",
-    label: "VOZ",
-    description: "Aumenta o alcance do teu chamamento.",
-    maxLevel: 10,
-    baseCost: 450,
-    perLevel: 0.1,
+    id: "recuperacao",
+    label: "RECUPERAÇÃO",
+    description: "Recupera mais depressa depois de cansar ou colidir.",
+    maxLevel: UPGRADE_MAX_LEVEL,
+    baseCost: 280,
+    perLevel: UPGRADE_PER_LEVEL["recuperacao"] ?? 0.1,
   },
   {
-    id: "persuasao",
-    label: "PERSUASÃO",
-    description: "Convences os passageiros mais depressa.",
-    maxLevel: 10,
-    baseCost: 500,
-    perLevel: 0.07,
+    id: "agilidade",
+    label: "AGILIDADE",
+    description: "Melhora a resposta e a movimentação.",
+    maxLevel: UPGRADE_MAX_LEVEL,
+    baseCost: 320,
+    perLevel: UPGRADE_PER_LEVEL["agilidade"] ?? 0.05,
   },
 ];

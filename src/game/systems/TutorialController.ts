@@ -42,17 +42,17 @@ export interface TutorialStepInfo {
 
 export const TUTORIAL_STEPS: Record<TutorialStep, TutorialStepInfo> = {
   [TutorialStep.INTRO]: { message: "", hudTarget: null },
-  [TutorialStep.MOVE]: { message: "Usa o joystick para te mover.", hudTarget: "joystick" },
-  [TutorialStep.FIND_PASSENGER]: { message: "Aproxima-te do passageiro.", hudTarget: null },
-  [TutorialStep.CALL]: { message: "Toca em CHAMAR.", hudTarget: "call" },
-  [TutorialStep.CONVINCE]: { message: "Toca em E para convencer.", hudTarget: "interact" },
-  [TutorialStep.TAKE_TO_TAXI]: { message: "Leva o passageiro até ao táxi.", hudTarget: null },
-  [TutorialStep.SCORE]: { message: "Aqui vês os teus ganhos.", hudTarget: "money" },
-  [TutorialStep.RUN]: { message: "Experimenta CORRER.", hudTarget: "run" },
-  [TutorialStep.ENERGY]: { message: "Correr gasta energia.", hudTarget: "energy" },
-  [TutorialStep.OBJECTIVES]: { message: "Consulta aqui os objetivos.", hudTarget: "objectives" },
-  [TutorialStep.TIMER]: { message: "Completa tudo antes do tempo acabar.", hudTarget: "timer" },
-  [TutorialStep.FREE_PLAY]: { message: "Completa os objetivos para vencer!", hudTarget: null },
+  [TutorialStep.MOVE]: { message: "Usa o joystick (lado esquerdo) para te mover.", hudTarget: "joystick" },
+  [TutorialStep.FIND_PASSENGER]: { message: "Aproxima-te do passageiro marcado.", hudTarget: null },
+  [TutorialStep.CALL]: { message: "Toca em CHAMAR para atrair o passageiro.", hudTarget: "call" },
+  [TutorialStep.CONVINCE]: { message: "Toca em FALAR junto do passageiro.", hudTarget: "interact" },
+  [TutorialStep.TAKE_TO_TAXI]: { message: "Leva o passageiro até ao táxi do mesmo destino.", hudTarget: null },
+  [TutorialStep.SCORE]: { message: "Cada passageiro dá Kz. Aqui vês os ganhos.", hudTarget: "money" },
+  [TutorialStep.RUN]: { message: "Mantém CORRER para ir mais depressa.", hudTarget: "run" },
+  [TutorialStep.ENERGY]: { message: "Correr gasta energia — para para recuperar.", hudTarget: "energy" },
+  [TutorialStep.OBJECTIVES]: { message: "Toca em OBJ. para ver o que falta fazer.", hudTarget: "objectives" },
+  [TutorialStep.TIMER]: { message: "Completa os objectivos antes do tempo acabar.", hudTarget: "timer" },
+  [TutorialStep.FREE_PLAY]: { message: "Chama → Fala → Leva ao táxi. Completa o objectivo!", hudTarget: null },
 };
 
 /**

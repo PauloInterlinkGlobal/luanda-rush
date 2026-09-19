@@ -41,6 +41,11 @@ export class HUDScene extends Phaser.Scene {
   private objPanel!: Phaser.GameObjects.Container;
   private objPanelItems: { label: Phaser.GameObjects.Text; status: Phaser.GameObjects.Text }[] = [];
   private powerDot!: Phaser.GameObjects.Arc;
+  /** Painel compacto de fase (objectivos em tempo real). */
+  private phaseTitle!: Phaser.GameObjects.Text;
+  private phaseLines: Phaser.GameObjects.Text[] = [];
+  private phaseStars!: Phaser.GameObjects.Text;
+  private phaseCard!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("HUD");
@@ -126,6 +131,7 @@ export class HUDScene extends Phaser.Scene {
     });
     this.registry.set("objectivesOpen", false);
     this.buildObjectivesPanel(objY + objH + s(6));
+    this.buildPhaseHud(objY + objH + s(6));
 
     // ---------------- canto superior direito: [💰 Kz | ⏱ tempo] [Ⅱ]
     const pauseR = Math.max(16, s(15));
@@ -214,7 +220,11 @@ export class HUDScene extends Phaser.Scene {
     this.hudPos = {
       joystick: { x: this.stickBase.x, y: this.stickBase.y, r: this.stickBase.radius + s(10) },
       call: { x: this.callBtn.x, y: this.callBtn.y, r: this.callBtn.radius + s(8) },
-      interact: { x: this.interactBtn.x, y: this.interactBtn.y, r: this.interactBtn.radius + s(6) },
+      interact: {
+        x: this.interactBtn.x,
+        y: this.interactBtn.y,
+        r: this.interactBtn.radius + s(10),
+      },
       run: { x: this.runBtn.x, y: this.runBtn.y, r: this.runBtn.radius + s(8) },
       energy: { x: l.left + s(76), y: energyY + energyH / 2, r: s(42) },
       objectives: { x: l.left + objW / 2, y: objY + objH / 2, r: s(44) },
@@ -264,14 +274,15 @@ export class HUDScene extends Phaser.Scene {
     return g;
   }
 
-  /** Painel de objetivos (dados reais do MissionManager), aberto pelo botão OBJ. */
+  /** Painel de objetivos (fase ou missões), aberto pelo botão OBJ. */
   private buildObjectivesPanel(topY: number): void {
     const l = this.L;
-    const missions = this.game_.missions.progress;
-    const w = Math.min(l.s(262), l.innerWidth * 0.6);
+    const levelObjs = this.game_.levelMgr?.objectives.progress;
+    const rows = levelObjs ?? this.game_.missions.progress;
+    const w = Math.min(l.s(280), l.innerWidth * 0.62);
     const rowH = l.s(22);
     const pad = l.s(10);
-    const h = missions.length * rowH + pad * 2;
+    const h = Math.max(1, rows.length) * rowH + pad * 2;
     const container = this.add.container(l.left, topY).setDepth(1500).setVisible(false);
     const bg = this.add.graphics();
     bg.fillStyle(0x0e1a33, 0.94);
@@ -279,10 +290,11 @@ export class HUDScene extends Phaser.Scene {
     bg.lineStyle(2, 0xffc31f, 0.6);
     bg.strokeRoundedRect(0, 0, w, h, 12);
     container.add(bg);
-    missions.forEach((m, i) => {
+    rows.forEach((m, i) => {
       const cy = pad + i * rowH + rowH / 2;
+      const name = "def" in m ? m.def.label : (m as { def: { label: string } }).def.label;
       const label = this.add
-        .text(pad, cy, m.def.label, {
+        .text(pad, cy, name, {
           fontFamily: FONT.display,
           fontSize: l.font(11),
           color: HEX.white,
@@ -295,6 +307,66 @@ export class HUDScene extends Phaser.Scene {
       this.objPanelItems.push({ label, status });
     });
     this.objPanel = container;
+  }
+
+  /**
+   * HUD compacto da fase — canto superior esquerdo, abaixo de OBJ.
+   * Mostra FASE N, objectivos principais e estrelas preview sem cobrir o jogo.
+   */
+  private buildPhaseHud(topY: number): void {
+    const l = this.L;
+    const s = l.s;
+    this.phaseLines = [];
+    const mgr = this.game_.levelMgr;
+    if (!mgr) {
+      // Placeholders invisíveis para o update não falhar
+      this.phaseTitle = this.add.text(0, 0, "").setVisible(false);
+      this.phaseStars = this.add.text(0, 0, "").setVisible(false);
+      this.phaseCard = this.add.graphics().setVisible(false);
+      return;
+    }
+
+    const w = Math.min(s(168), l.innerWidth * 0.38);
+    const maxRows = Math.min(4, mgr.def.objectives.length);
+    const h = s(18) + maxRows * s(14) + s(16);
+    this.phaseCard = this.add.graphics().setScrollFactor(0).setDepth(900);
+    this.phaseCard.fillStyle(0x0e1a33, 0.72);
+    this.phaseCard.fillRoundedRect(l.left, topY, w, h, 10);
+    this.phaseCard.lineStyle(1, 0xffc31f, 0.35);
+    this.phaseCard.strokeRoundedRect(l.left, topY, w, h, 10);
+
+    this.phaseTitle = this.add
+      .text(l.left + s(8), topY + s(4), `FASE ${mgr.phaseId}`, {
+        fontFamily: FONT.display,
+        fontSize: l.font(11),
+        color: HEX.yellow,
+      })
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(901);
+
+    this.phaseStars = this.add
+      .text(l.left + w - s(8), topY + s(4), "☆☆☆", {
+        fontFamily: FONT.display,
+        fontSize: l.font(10),
+        color: HEX.muted,
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(901);
+
+    for (let i = 0; i < maxRows; i++) {
+      const line = this.add
+        .text(l.left + s(8), topY + s(18) + i * s(14), "", {
+          fontFamily: FONT.body,
+          fontSize: l.font(10),
+          color: HEX.white,
+        })
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(901);
+      this.phaseLines.push(line);
+    }
   }
 
   private callBtn!: Phaser.GameObjects.Arc;
@@ -317,20 +389,25 @@ export class HUDScene extends Phaser.Scene {
       .circle(stickX, stickY, stickRadius * 0.4, 0xffc31f, 0.6)
       .setScrollFactor(0);
 
+    // Stick activa em toda a metade esquerda (origem no toque) — convenção mobile.
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      const distance = Phaser.Math.Distance.Between(p.x, p.y, stickX, stickY);
-      if (p.x < l.width / 2 && distance <= stickRadius + 10 && this.stickId === -1) {
-        this.stickId = p.id;
-        this.stickThumb.setPosition(stickX, stickY);
-      }
+      if (p.x >= l.width / 2 || this.stickId !== -1) return;
+      // Evita capturar toques nos botões de acção (direita) e no topo (HUD).
+      if (p.y < l.top + s(60)) return;
+      this.stickId = p.id;
+      this.stickBase.setPosition(p.x, p.y);
+      this.stickThumb.setPosition(p.x, p.y);
+      this.registry.set("joystick", { x: 0, y: 0, run: false });
     });
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (p.id !== this.stickId) return;
-      const dx = p.x - stickX;
-      const dy = p.y - stickY;
+      const ox = this.stickBase.x;
+      const oy = this.stickBase.y;
+      const dx = p.x - ox;
+      const dy = p.y - oy;
       const len = Math.min(stickRadius, Math.hypot(dx, dy));
       const a = Math.atan2(dy, dx);
-      this.stickThumb.setPosition(stickX + Math.cos(a) * len, stickY + Math.sin(a) * len);
+      this.stickThumb.setPosition(ox + Math.cos(a) * len, oy + Math.sin(a) * len);
       this.registry.set("joystick", {
         x: (Math.cos(a) * len) / stickRadius,
         y: (Math.sin(a) * len) / stickRadius,
@@ -340,18 +417,20 @@ export class HUDScene extends Phaser.Scene {
     const release = (p: Phaser.Input.Pointer) => {
       if (p.id !== this.stickId) return;
       this.stickId = -1;
-      this.stickThumb.setPosition(this.stickBase.x, this.stickBase.y);
+      // Volta à âncora fixa no canto
+      this.stickBase.setPosition(stickX, stickY);
+      this.stickThumb.setPosition(stickX, stickY);
       this.registry.set("joystick", { x: 0, y: 0, run: false });
     };
     this.input.on("pointerup", release);
     this.input.on("pointerupoutside", release);
 
     // Coluna principal do canto inferior direito: CHAMAR em cima, CORRER em baixo.
-    const big = Math.max(30, s(34));
-    const mini = Math.max(22, s(24));
+    const big = Math.max(34, s(36)); // ≥44px área de toque confortável
+    const mid = Math.max(28, s(30));
     const colX = l.right - big;
     const runY = l.bottom - big;
-    const callY = runY - big * 2 - s(14);
+    const callY = runY - big * 2 - s(12);
     this.callBtn = this.actionButton(colX, callY, "🚕", "CHAMAR", 0xffc31f, HEX.dark, () =>
       this.events.emit("hud-call"),
     );
@@ -361,14 +440,20 @@ export class HUDScene extends Phaser.Scene {
     this.runBtn.on("pointerup", () => this.registry.set("runHeld", false));
     this.runBtn.on("pointerout", () => this.registry.set("runHeld", false));
 
-    // Botões secundários (interagir / power-up), mais pequenos, à esquerda dos principais.
-    const miniX = colX - big - mini - s(6);
-    const interactY = (callY + runY) / 2 + mini * 0.6;
-    const powerY = interactY - mini * 2 - s(10);
-    this.interactBtn = this.miniButton(miniX, interactY, "E", "hud-interact", mini);
-    this.miniButton(miniX, powerY, "Q", "hud-power", mini);
+    // FALAR (ex-E) e BOOST (ex-Q) — legendas mobile, não teclas de PC.
+    const midX = colX - big - mid - s(8);
+    const interactY = (callY + runY) / 2 + mid * 0.35;
+    const powerY = interactY - mid * 2.1 - s(8);
+    this.interactBtn = this.actionButton(midX, interactY, "🤝", "FALAR", 0x36b45a, HEX.white, () =>
+      this.events.emit("hud-interact"),
+    );
+    // BOOST mais pequeno mas com legenda
+    const boost = this.actionButton(midX, powerY, "⚡", "BOOST", 0x16305c, HEX.white, () =>
+      this.events.emit("hud-power"),
+    );
+    boost.setScale(0.85);
     this.powerDot = this.add
-      .circle(miniX + mini * 0.65, powerY - mini * 0.65, Math.max(3, s(4)), 0xffc31f)
+      .circle(midX + mid * 0.55, powerY - mid * 0.55, Math.max(3, s(4)), 0xffc31f)
       .setScrollFactor(0)
       .setVisible(false);
 
@@ -450,7 +535,7 @@ export class HUDScene extends Phaser.Scene {
       .text(
         0,
         -cardH * 0.02,
-        "Ajuda os passageiros a entrar nos táxis e completa\nos objetivos antes do tempo acabar.",
+        "Chama → Fala → Leva ao táxi.\nGanhas Kz por cada passageiro. Completa o objectivo.",
         {
           fontFamily: FONT.body,
           fontSize: l.font(14),
@@ -585,15 +670,52 @@ export class HUDScene extends Phaser.Scene {
     this.rushText.setVisible(g.isRush);
     this.powerDot.setVisible(g.powerUps.cooldownRatio(this.time.now) >= 1);
 
-    const done = g.missions.progress.filter((m) => m.done).length;
-    this.objBadge.setText(String(done));
-    if (this.objPanel.visible) {
-      g.missions.progress.forEach((m, i) => {
-        const item = this.objPanelItems[i];
-        if (!item) return;
-        item.status.setText(m.done ? "✓" : `${Math.min(m.current, m.def.goal)}/${m.def.goal}`);
-        item.status.setColor(m.done ? HEX.green : HEX.muted);
-      });
+    // Objectivos: preferir fase, senão missões
+    const levelMgr = g.levelMgr;
+    if (levelMgr) {
+      const snap = levelMgr.hudSnapshot(g.economy.stats, g.combo.level);
+      const done = snap.objectives.filter((o) => o.done).length;
+      this.objBadge.setText(String(done));
+
+      if (this.phaseTitle?.visible !== false && this.phaseTitle?.active) {
+        this.phaseTitle.setText(`FASE ${snap.phaseId}`);
+        const st = snap.starsPreview;
+        this.phaseStars.setText("★".repeat(st) + "☆".repeat(Math.max(0, 3 - st)));
+        this.phaseStars.setColor(st > 0 ? HEX.gold : HEX.muted);
+
+        snap.objectives.slice(0, this.phaseLines.length).forEach((o, i) => {
+          const line = this.phaseLines[i];
+          if (!line) return;
+          const cur = o.inverted ? o.current : Math.min(o.current, o.goal);
+          const icon = o.done ? "✓" : o.failed ? "✗" : "·";
+          // Labels curtos para mobile
+          const short =
+            o.label.length > 10 ? o.label.slice(0, 9) + "…" : o.label;
+          line.setText(`${icon} ${short} ${cur}/${o.goal}`);
+          line.setColor(o.done ? HEX.green : o.failed ? HEX.red : HEX.white);
+        });
+      }
+
+      if (this.objPanel.visible) {
+        snap.objectives.forEach((o, i) => {
+          const item = this.objPanelItems[i];
+          if (!item) return;
+          const cur = o.inverted ? o.current : Math.min(o.current, o.goal);
+          item.status.setText(o.done ? "✓" : o.failed ? "✗" : `${cur}/${o.goal}`);
+          item.status.setColor(o.done ? HEX.green : o.failed ? HEX.red : HEX.muted);
+        });
+      }
+    } else {
+      const done = g.missions.progress.filter((m) => m.done).length;
+      this.objBadge.setText(String(done));
+      if (this.objPanel.visible) {
+        g.missions.progress.forEach((m, i) => {
+          const item = this.objPanelItems[i];
+          if (!item) return;
+          item.status.setText(m.done ? "✓" : `${Math.min(m.current, m.def.goal)}/${m.def.goal}`);
+          item.status.setColor(m.done ? HEX.green : HEX.muted);
+        });
+      }
     }
   }
 }

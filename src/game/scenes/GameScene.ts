@@ -16,14 +16,28 @@ import { MISSIONS, TUTORIAL_MISSIONS } from "../data/missions";
 import { TutorialController } from "../systems/TutorialController";
 import { DifficultyManager } from "../systems/DifficultyManager";
 import { PowerUpManager } from "../systems/PowerUpManager";
+import { LevelManager } from "../systems/LevelManager";
 import { SaveManager } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
-import { PassengerState, PowerUpType, TaxiState, TaxiType, type SaveData } from "../types";
+import { ObjectiveGuide, highlightMatchingTaxis } from "../systems/ObjectiveGuide";
+import { vibrateFail, vibrateReward, vibrateLight } from "../systems/Feedback";
+import {
+  PassengerState,
+  PowerUpType,
+  TaxiState,
+  TaxiType,
+  type LevelResult,
+  type SaveData,
+} from "../types";
 import { layoutOf, onResize } from "../systems/Responsive";
+import type { AIProfile } from "../ai/LotadorAI";
 
 const NPC_SHEETS = ["npc_kito", "npc_manuel", "npc_debora"];
 
-/** Cena principal: o turno de 3 minutos na paragem. */
+/**
+ * Cena principal: uma fase (ou turno livre) na paragem.
+ * A dificuldade, objectivos e vitória vêm do LevelManager quando há fase activa.
+ */
 export class GameScene extends Phaser.Scene {
   private save!: SaveData;
   player!: Player;
@@ -35,6 +49,8 @@ export class GameScene extends Phaser.Scene {
   missions!: MissionManager;
   difficulty!: DifficultyManager;
   powerUps = new PowerUpManager();
+  /** null = modo livre (sem campanha); caso contrário fase activa. */
+  levelMgr: LevelManager | null = null;
 
   timeLeft: number = BALANCE.matchDuration;
   rushUntil = 0;
@@ -46,10 +62,22 @@ export class GameScene extends Phaser.Scene {
   private tutorialTimerStarted = false;
   /** Camada guiada do nível 1 — null fora do tutorial. */
   tutorialCtl: TutorialController | null = null;
+  /** Waypoints fora do tutorial. */
+  private objectiveGuide: ObjectiveGuide | null = null;
   private wasRunning = false;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private obstacles!: Phaser.Physics.Arcade.StaticGroup;
   private callRing!: Phaser.GameObjects.Arc;
+  /** Barra de progresso ao convencer (feedback visual). */
+  private convinceBar!: Phaser.GameObjects.Graphics;
+  private convinceTarget: Passenger | null = null;
+  private autoConvinceMs = 0;
+  private lastBumpMs = 0;
+  /** Lado da estrada do jogador (para contar travessias). */
+  private lastRoadSide: "above" | "on" | "below" = "above";
+  private crossingCooldown = 0;
+  /** Rivais que também miravam o passageiro que o jogador embarcou. */
+  private disputedPassengers = new WeakSet<Passenger>();
 
   constructor() {
     super("Game");
@@ -58,26 +86,48 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.ended = false;
     this.paused = false;
-    this.tutorialMode = this.registry.get("tutorial") === true;
-    this.timeLeft = this.tutorialMode ? BALANCE.tutorialMatchDuration : BALANCE.matchDuration;
-    this.paused = this.tutorialMode;
-    this.tutorialTimerStarted = false;
+    this.npcs = [];
+    this.pedestrians = [];
     this.wasRunning = false;
     this.combo.reset();
     this.economy.reset();
     this.powerUps.reset();
+    this.levelMgr = null;
+    this.tutorialCtl = null;
+    this.tutorialTimerStarted = false;
+    this.crossingCooldown = 0;
 
     this.save = SaveManager.load();
     audio.sfxEnabled = this.save.settings.sfx;
     audio.musicEnabled = this.save.settings.music;
 
+    // ── Fase da campanha (registry.phase) ou tutorial legado ──────────
+    const phaseId = Number(this.registry.get("phase") ?? 0);
+    const forceTutorial = this.registry.get("tutorial") === true;
+
+    if (phaseId > 0 && LevelManager.hasPhase(phaseId)) {
+      this.levelMgr = new LevelManager(phaseId);
+      this.tutorialMode = this.levelMgr.isTutorial || forceTutorial;
+      this.timeLeft = this.levelMgr.duration;
+      this.levelMgr.begin();
+    } else if (forceTutorial) {
+      this.levelMgr = new LevelManager(1);
+      this.tutorialMode = true;
+      this.timeLeft = this.levelMgr.duration;
+      this.levelMgr.begin();
+    } else {
+      // Modo livre (sem fase): comportamento clássico de 3 min
+      this.tutorialMode = false;
+      this.timeLeft = BALANCE.matchDuration;
+    }
+
+    // Tutorial / fase 1 começa pausado até COMEÇAR
+    this.paused = this.tutorialMode;
+
     this.physics.world.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
     this.cameras.main.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
     this.cameras.main.setBackgroundColor(COLORS.night);
 
-    // ---------------------------------------------------------------- câmara
-    // Escala uniforme pela altura de referência: ecrãs largos passam a mostrar
-    // MAIS cenário, em vez de esticar personagens, táxis ou props.
     this.applyCameraLayout();
     onResize(this, () => this.applyCameraLayout());
 
@@ -89,15 +139,17 @@ export class GameScene extends Phaser.Scene {
 
     this.buildProps();
 
-    const spawnPoint = this.tutorialMode
-      ? MAP_CONFIG.tutorial.playerSpawn
-      : MAP_CONFIG.playerSpawn;
+    const spawnCfg = this.levelMgr?.spawn;
+    const spawnPoint =
+      this.tutorialMode || spawnCfg?.guidedTutorial
+        ? MAP_CONFIG.tutorial.playerSpawn
+        : MAP_CONFIG.playerSpawn;
     this.player = new Player(this, spawnPoint.x, spawnPoint.y, this.save);
     this.player.on("footstep", () => audio.step());
     this.physics.add.collider(this.player, this.obstacles);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
-    // Referência para o HUD (visibilidade dos nomes dos NPCs quando próximos).
     this.registry.set("player", this.player);
+    this.lastRoadSide = this.roadSide(this.player.y);
 
     this.callRing = this.add
       .circle(this.player.x, this.player.y, BALANCE.callRadius, 0xffc31f, 0.12)
@@ -105,25 +157,52 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
 
     this.spawns = new SpawnManager(this);
-    // Os táxis são sólidos: o jogador não os atravessa — contorna-os como
-    // se fossem paredes (o corpo do táxi é imóvel, não é empurrado).
     this.physics.add.collider(this.player, this.spawns.taxiGroup);
-    this.difficulty = new DifficultyManager(this.save.level);
-    this.missions = new MissionManager({}, this.tutorialMode ? TUTORIAL_MISSIONS : MISSIONS);
+
+    this.difficulty = new DifficultyManager(this.save.level, spawnCfg ?? null);
+
+    // Missões de fundo (sistema antigo) + objectivos de fase (LevelManager)
+    const missionDefs = this.tutorialMode ? TUTORIAL_MISSIONS : MISSIONS;
+    this.missions = new MissionManager({}, missionDefs);
     this.missions.onComplete = (m) => {
       this.floatText(this.player.x, this.player.y - 70, `MISSÃO: ${m.label}`, HEX.gold);
       audio.reward();
     };
+    if (this.levelMgr) {
+      this.levelMgr.objectives.onComplete = (obj) => {
+        this.floatText(this.player.x, this.player.y - 70, `✓ ${obj.label}`, HEX.gold);
+        audio.objectiveComplete();
+        vibrateReward();
+      };
+    }
 
-    if (!this.tutorialMode) this.spawnNpcs(this.difficulty.current.npcCount);
-    this.spawnPedestrians();
-    if (this.tutorialMode) {
-      // Nível 1: cenário determinístico — 1 táxi, 1 passageiro, 0 rivais.
+    this.convinceBar = this.add.graphics().setDepth(200000);
+    this.objectiveGuide = new ObjectiveGuide(this);
+
+    // ── Spawns iniciais conforme a fase ──────────────────────────────
+    const npcTarget = spawnCfg?.npcCount ?? this.difficulty.current.npcCount;
+    if (!this.tutorialMode && npcTarget > 0) {
+      this.spawnNpcs(npcTarget);
+    }
+    this.spawnPedestrians(spawnCfg?.pedestrianCount);
+
+    if (this.tutorialMode || spawnCfg?.guidedTutorial) {
       this.spawns.autoSpawn = false;
       const taxi = this.spawns.spawnTaxi(TaxiType.NORMAL, MAP_CONFIG.tutorial.taxiSlot);
-      if (taxi) taxi.frozenWait = true;
+      if (taxi) taxi.frozenWait = spawnCfg?.freezeTaxiWait !== false;
       this.spawnTutorialPassenger();
       this.tutorialCtl = new TutorialController(this);
+    } else if (spawnCfg) {
+      this.spawns.autoSpawn = spawnCfg.autoSpawn;
+      const taxisToSpawn = Math.max(1, spawnCfg.initialTaxis);
+      for (let i = 0; i < taxisToSpawn; i++) this.spawns.spawnTaxi();
+      for (let i = 0; i < spawnCfg.initialPassengers; i++) this.spawns.spawnPassenger();
+      if (spawnCfg.freezePatience) {
+        this.spawns.passengers.forEach((p) => (p.frozenPatience = true));
+      }
+      if (spawnCfg.freezeTaxiWait) {
+        this.spawns.taxis.forEach((t) => (t.frozenWait = true));
+      }
     } else {
       this.spawns.spawnTaxi(TaxiType.NORMAL);
       for (let i = 0; i < 4 + this.save.stationLevel * 2; i++) {
@@ -147,28 +226,21 @@ export class GameScene extends Phaser.Scene {
       this.npcs = [];
       this.pedestrians.forEach((p) => p.destroy());
       this.pedestrians = [];
-      // Limpa a referência ao tutorial para que os handlers do HUD
-      // não disparem sobre uma cena já destruída.
       this.tutorialCtl = null;
+      this.levelMgr = null;
+      this.objectiveGuide?.destroy();
+      this.objectiveGuide = null;
     });
   }
 
-  /**
-   * Ajusta viewport + zoom da câmara ao tamanho real do ecrã.
-   * O zoom é único (X = Y), logo nada fica achatado nem alongado; o limite
-   * inferior garante ainda que a área visível nunca ultrapassa o mapa
-   * (sem faixas vazias nas extremidades).
-   */
   private applyCameraLayout(): void {
     const cam = this.cameras.main;
     const l = layoutOf(this);
-    // Zoom mínimo para o mapa cobrir sempre todo o ecrã (sem barras).
     const minZoom = Math.max(l.width / MAP_CONFIG.width, l.height / MAP_CONFIG.height);
     const zoom = Math.max(minZoom, Phaser.Math.Clamp(l.scale, 0.62, 1.35));
     cam.setViewport(0, 0, l.width, l.height);
     cam.setZoom(zoom);
     cam.setBounds(0, 0, MAP_CONFIG.width, MAP_CONFIG.height);
-    // Recentrar preserva os limites do mapa e evita saltos perto das bordas.
     const target = this.player ?? MAP_CONFIG.playerSpawn;
     cam.centerOn(target.x, target.y);
   }
@@ -176,7 +248,11 @@ export class GameScene extends Phaser.Scene {
   // ---------------------------------------------------------------- mapa
   private buildProps(): void {
     this.obstacles = this.physics.add.staticGroup();
-    MAP_CONFIG.props.forEach(([kind, x, y]) => {
+    const density = this.levelMgr?.spawn.obstacleDensity ?? 1;
+    // Em fases fáceis, esconde parte dos cones/obstáculos menores
+    MAP_CONFIG.props.forEach(([kind, x, y], index) => {
+      const isMinor = kind === "cone" || kind === "bin";
+      if (isMinor && density < 1 && index % 3 !== 0 && Math.random() > density) return;
       const key = `prop_${kind}`;
       if (!this.textures.exists(key)) return;
       const sprite = this.physics.add.staticSprite(x, y, key);
@@ -189,29 +265,26 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Figurantes que passeiam pela paragem (sem interferir no jogo). */
-  private spawnPedestrians(): void {
+  private spawnPedestrians(limit?: number): void {
     const keys = AMBIENT_KEYS.filter((k) => this.textures.exists(k));
     if (keys.length === 0) return;
-    MAP_CONFIG.ambientSpawns.forEach((spot, i) => {
+    const spots = MAP_CONFIG.ambientSpawns;
+    const count = Math.min(spots.length, limit ?? spots.length);
+    for (let i = 0; i < count; i++) {
+      const spot = spots[i]!;
       const key = keys[(i + Phaser.Math.Between(0, keys.length - 1)) % keys.length]!;
       const ped = new Pedestrian(this, spot.x, spot.y, key);
       this.physics.add.collider(ped, this.obstacles);
       this.pedestrians.push(ped);
-    });
+    }
   }
 
-  /** Nível 1: um único passageiro, sempre no mesmo sítio e com o destino do táxi. */
   private spawnTutorialPassenger(): void {
     const taxi = this.spawns.taxis.find((t) => t.active && t.state !== TaxiState.GONE);
     const p = this.spawns.spawnPassenger(taxi?.destination, MAP_CONFIG.tutorial.passengerSpawn);
     if (p) p.frozenPatience = true;
   }
 
-  /**
-   * Nível 1: garante sempre exactamente 1 táxi e 1 passageiro disponíveis,
-   * repondo-os nas posições fixas se algum sair de cena.
-   */
   private ensureTutorialWorld(): void {
     const taxi = this.spawns.taxis.find(
       (t) => t.active && t.state !== TaxiState.GONE && t.state !== TaxiState.DEPARTING,
@@ -228,14 +301,29 @@ export class GameScene extends Phaser.Scene {
 
   private spawnNpcs(count: number): void {
     const world = { passengers: this.spawns.passengers, taxis: this.spawns.taxis };
+    const speedMul = this.difficulty.current.npcSpeedMul;
+    const stratMul = this.difficulty.current.npcStrategyMul;
     for (let i = this.npcs.length; i < count; i++) {
       const spot = MAP_CONFIG.npcSpawns[i % MAP_CONFIG.npcSpawns.length]!;
       const sheet = NPC_SHEETS[i % NPC_SHEETS.length]!;
-      const npc = new LotadorNPC(this, spot.x, spot.y, sheet, world);
+      const base = this.npcBaseProfile(sheet);
+      const profile: AIProfile = {
+        speed: base.speed * speedMul,
+        strategy: base.strategy * stratMul,
+        persuasion: base.persuasion,
+      };
+      const npc = new LotadorNPC(this, spot.x, spot.y, sheet, world, profile);
       npc.on("npc-board", (p: Passenger, taxi: Taxi) => this.npcBoard(p, taxi));
       this.physics.add.collider(npc, this.obstacles);
       this.npcs.push(npc);
     }
+  }
+
+  private npcBaseProfile(sheet: string): AIProfile {
+    if (sheet.includes("kito")) return { speed: 1.25, strategy: 1.0, persuasion: 1.0 };
+    if (sheet.includes("manuel")) return { speed: 1.0, strategy: 1.3, persuasion: 1.0 };
+    if (sheet.includes("debora")) return { speed: 1.05, strategy: 1.05, persuasion: 1.25 };
+    return { speed: 1, strategy: 1, persuasion: 1 };
   }
 
   // -------------------------------------------------------------- input
@@ -259,9 +347,17 @@ export class GameScene extends Phaser.Scene {
       kb.on("keydown-F5", () => this.economy.addComboXp(5));
       kb.on("keydown-F6", () => this.startRush());
       kb.on("keydown-F7", () => (this.player.stamina = this.player.maxStamina));
+      kb.on("keydown-F8", () => {
+        // Debug: completar objectivo principal
+        if (this.levelMgr) {
+          this.economy.stats.passengers = 99;
+          this.economy.stats.taxisFilled = 99;
+          this.economy.stats.money = 9999;
+          this.economy.stats.disputesWon = 99;
+        }
+      });
     }
 
-    // Controlos móveis (emitidos pelo HUD)
     const hud = this.scene.get("HUD");
     const hudHandlers: Record<string, () => void> = {
       "hud-interact": () => this.interact(),
@@ -272,7 +368,6 @@ export class GameScene extends Phaser.Scene {
     for (const [event, handler] of Object.entries(hudHandlers)) {
       hud.events.on(event, handler);
     }
-    // Remove os listeners ao encerrar — evita acumulação quando a cena recomeça.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       for (const [event, handler] of Object.entries(hudHandlers)) {
         hud.events.off(event, handler);
@@ -324,18 +419,33 @@ export class GameScene extends Phaser.Scene {
   private interact(): void {
     if (this.paused || this.ended) return;
     const p = this.nearestPassenger(BALANCE.interactRadius * 1.4);
-    if (!p) return;
+    if (!p) {
+      this.floatText(this.player.x, this.player.y - 50, "CHEGA MAIS PERTO", HEX.muted);
+      return;
+    }
     this.player.playOnce("interact", 260);
     const taxi = this.taxiFor(p);
     if (!taxi) {
       this.floatText(p.x, p.y - 60, "SEM TÁXI PARA " + p.destination, HEX.red);
+      vibrateLight();
       return;
     }
+    // Marca disputa se algum rival também mira este passageiro
+    for (const npc of this.npcs) {
+      if (npc.ai.target === p) {
+        this.disputedPassengers.add(p);
+        break;
+      }
+    }
+    this.convinceTarget = p;
     const accepted = p.tryConvince(this.player, 420 * this.player.convinceBonus, 1);
     if (accepted) {
       p.startFollowing(taxi);
       audio.accept();
+      vibrateLight();
       this.floatText(p.x, p.y - 60, "BORA!", HEX.green);
+      this.convinceTarget = null;
+      this.convinceBar.clear();
     }
   }
 
@@ -366,6 +476,9 @@ export class GameScene extends Phaser.Scene {
     if (touched > 0) {
       this.economy.registerCall();
       this.floatText(this.player.x, this.player.y - 60, `${touched} OUVIRAM!`, HEX.yellow);
+      vibrateLight();
+    } else {
+      this.floatText(this.player.x, this.player.y - 60, "NINGUÉM OUVIU!", HEX.muted);
     }
   }
 
@@ -387,10 +500,20 @@ export class GameScene extends Phaser.Scene {
       const gained = this.economy.addPassenger(p.value, this.combo.multiplier);
       this.floatText(taxi.x, taxi.y - 80, `+${gained} Kz`, HEX.gold);
       audio.reward();
+      vibrateReward();
+      if (this.disputedPassengers.has(p)) {
+        this.economy.registerDisputeWon();
+        this.floatText(taxi.x, taxi.y - 50, "DISPUTA VENCIDA!", HEX.yellow);
+      }
     } else {
-      this.economy.registerLoss();
+      if (!p.lossCounted) {
+        p.lossCounted = true;
+        this.economy.registerLoss();
+        this.economy.registerPenalty(1);
+      }
       this.floatText(p.x, p.y - 60, "PASSAGEIRO PERDIDO!", HEX.red);
       audio.lost();
+      vibrateFail();
     }
     this.tweens.add({
       targets: p,
@@ -455,16 +578,41 @@ export class GameScene extends Phaser.Scene {
     return this.time.now < this.rushUntil;
   }
 
+  private roadSide(y: number): "above" | "on" | "below" {
+    const road = MAP_CONFIG.road;
+    if (y < road.y) return "above";
+    if (y > road.y + road.h) return "below";
+    return "on";
+  }
+
+  private trackCrossing(dt: number): void {
+    this.crossingCooldown = Math.max(0, this.crossingCooldown - dt);
+    const side = this.roadSide(this.player.y);
+    if (
+      this.crossingCooldown <= 0 &&
+      this.lastRoadSide !== "on" &&
+      side !== "on" &&
+      side !== this.lastRoadSide
+    ) {
+      // Atravessou de um lado para o outro
+      this.economy.registerCrossing();
+      this.crossingCooldown = 1.5;
+    }
+    if (side !== "on") this.lastRoadSide = side;
+  }
+
   // --------------------------------------------------------------- loop
   override update(_time: number, delta: number): void {
     if (this.paused || this.ended) return;
 
     const dt = delta / 1000;
-    if (!this.tutorialMode || this.tutorialTimerStarted) {
+    const timerActive = !this.tutorialMode || this.tutorialTimerStarted;
+    if (timerActive) {
       this.timeLeft -= dt;
+      this.levelMgr?.tick(dt);
     }
-    if (this.timeLeft <= 0) {
-      this.endMatch(this.tutorialMode ? false : undefined);
+    if (this.timeLeft <= 0 || (this.levelMgr && this.levelMgr.timeLeft <= 0)) {
+      this.endMatch(undefined, true);
       return;
     }
 
@@ -481,39 +629,55 @@ export class GameScene extends Phaser.Scene {
     }
     const run = j.run || this.registry.get("runHeld") === true || Boolean(k?.["SHIFT"]?.isDown);
     this.player.move(Phaser.Math.Clamp(dx, -1, 1), Phaser.Math.Clamp(dy, -1, 1), run, delta);
-    if (this.tutorialMode && !this.tutorialTimerStarted && (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1)) {
+    if (
+      this.tutorialMode &&
+      !this.tutorialTimerStarted &&
+      (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1)
+    ) {
       this.tutorialTimerStarted = true;
     }
     if (this.player.isRunning && !this.wasRunning) this.economy.registerRun();
     this.wasRunning = this.player.isRunning;
+    this.trackCrossing(dt);
 
     // Sistemas
     const d = this.difficulty;
     d.tick(delta);
     this.combo.tick(delta);
     this.powerUps.tick(this.time.now);
+
+    const maxPass = this.tutorialMode ? 1 : d.current.maxPassengers;
+    const maxTaxis = this.tutorialMode
+      ? 1
+      : d.current.maxTaxis ?? Math.min(6, 2 + this.save.fleetLevel);
     this.spawns.tick(
       delta,
-      this.tutorialMode ? 1 : d.current.maxPassengers,
+      maxPass,
       d.current.passengerRate,
       d.current.taxiRate,
       this.isRush,
-      this.tutorialMode ? 1 : Math.min(6, 2 + this.save.fleetLevel),
+      maxTaxis,
     );
+
     if (this.tutorialMode) {
       this.ensureTutorialWorld();
     } else {
-      this.spawnNpcs(Math.min(d.current.npcCount, this.isRush ? 10 : d.current.npcCount));
+      const targetNpcs = Math.min(
+        d.current.npcCount,
+        this.isRush ? d.current.npcCount + 2 : d.current.npcCount,
+      );
+      this.spawnNpcs(targetNpcs);
     }
 
     if (!this.isRush) {
       this.economy.rewardMultiplier = 1;
-      // No tutorial não há hora de ponta — o nível 1 mantém-se calmo.
-      if (!this.tutorialMode) {
+      if (!this.tutorialMode && d.current.rushAllowed) {
+        // Trânsito alto = hora de ponta mais frequente
+        const rushChance = BALANCE.rushHourChance * (0.5 + d.current.trafficLevel);
         this.rushTimer -= dt;
         if (this.rushTimer <= 0) {
-          this.rushTimer = 30;
-          if (Math.random() < BALANCE.rushHourChance) this.startRush();
+          this.rushTimer = 30 - d.current.trafficLevel * 10;
+          if (Math.random() < rushChance) this.startRush();
         }
       }
     }
@@ -531,9 +695,15 @@ export class GameScene extends Phaser.Scene {
             : null;
       p.tick(delta, leader);
 
-      if (p.state === PassengerState.LEAVING && p.alpha > 0.9) this.economy.registerLoss();
+      // Conta perda uma única vez no início do LEAVING.
+      if (p.state === PassengerState.LEAVING && !p.lossCounted) {
+        p.lossCounted = true;
+        this.economy.registerLoss();
+        this.economy.registerPenalty(1);
+        audio.lost();
+        vibrateFail();
+      }
 
-      // Embarque quando o passageiro segue o jogador e o táxi está ao lado
       if (p.state === PassengerState.FOLLOWING && p.follower === this.player && p.targetTaxi) {
         const taxi = p.targetTaxi;
         if (!taxi.active || !taxi.isLoadable) {
@@ -554,14 +724,104 @@ export class GameScene extends Phaser.Scene {
     this.npcs.forEach((n) => n.tick(delta));
     this.pedestrians.forEach((p) => p.tick(delta));
 
+    // Avaliar missões + objectivos de fase
     this.missions.evaluate(this.economy.stats, this.combo.level);
-    this.tutorialCtl?.tick(delta);
-    // Vitória do tutorial: todos os objetivos do nível concluídos.
-    if (this.tutorialMode && this.missions.progress.length > 0 && this.missions.progress.every((m) => m.done)) {
-      this.endMatch(true);
+    if (this.levelMgr) {
+      this.levelMgr.evaluate(this.economy.stats, this.combo.level, this.save.reputation);
+      // Vitória antecipada quando objectivos primários estão feitos
+      if (this.levelMgr.checkEarlyWin(this.economy.stats, this.combo.level)) {
+        this.endMatch(true, true);
+        return;
+      }
+    } else if (
+      this.tutorialMode &&
+      this.missions.progress.length > 0 &&
+      this.missions.progress.every((m) => m.done)
+    ) {
+      this.endMatch(true, true);
       return;
     }
+
+    this.tutorialCtl?.tick(delta);
+    this.tickBumpFeedback();
+    this.objectiveGuide?.tick();
+    highlightMatchingTaxis(this);
+    this.updateConvinceBar();
+    this.tickAutoConvince(delta);
     this.callRing.setPosition(this.player.x, this.player.y);
+
+    // Sincroniza timeLeft com LevelManager para o HUD
+    if (this.levelMgr) this.timeLeft = this.levelMgr.timeLeft;
+  }
+
+
+  /** SFX + vibração leve ao embater em obstáculos (throttled). */
+  private tickBumpFeedback(): void {
+    const body = this.player.body as Phaser.Physics.Arcade.Body | undefined;
+    if (!body) return;
+    const hit =
+      body.blocked.left || body.blocked.right || body.blocked.up || body.blocked.down ||
+      body.touching.left || body.touching.right || body.touching.up || body.touching.down;
+    if (!hit) return;
+    const now = this.time.now;
+    if (now - this.lastBumpMs < 420) return;
+    this.lastBumpMs = now;
+    audio.bump();
+    vibrateLight();
+  }
+
+  /** Barra amarela sobre o passageiro enquanto o jogador o convence. */
+  private updateConvinceBar(): void {
+    this.convinceBar.clear();
+    const p = this.convinceTarget;
+    if (!p || !p.active || p.state !== PassengerState.APPROACHED) {
+      if (p && (!p.active || p.state !== PassengerState.APPROACHED)) this.convinceTarget = null;
+      return;
+    }
+    const ratio = p.convinceRatio;
+    const w = 48;
+    const x = p.x - w / 2;
+    const y = p.y - 70;
+    this.convinceBar.fillStyle(0x0e1a33, 0.7);
+    this.convinceBar.fillRoundedRect(x, y, w, 7, 3);
+    this.convinceBar.fillStyle(0xffc31f, 1);
+    this.convinceBar.fillRoundedRect(x, y, w * ratio, 7, 3);
+  }
+
+  /**
+   * Auto-convencer: se o jogador ficar ≥0,4s no raio de um passageiro disponível
+   * com táxi compatível, avança o progresso (reduz mis-taps no mobile).
+   */
+  private tickAutoConvince(delta: number): void {
+    if (this.paused || this.ended) return;
+    const p = this.nearestPassenger(BALANCE.interactRadius * 1.2);
+    if (!p || !this.taxiFor(p)) {
+      this.autoConvinceMs = 0;
+      return;
+    }
+    // Já a seguir o jogador — nada a fazer
+    if (p.follower === this.player) {
+      this.autoConvinceMs = 0;
+      return;
+    }
+    this.autoConvinceMs += delta;
+    if (this.autoConvinceMs < 400) return;
+    // Aplica um tick de convencer por frame após o threshold
+    this.convinceTarget = p;
+    for (const npc of this.npcs) {
+      if (npc.ai.target === p) this.disputedPassengers.add(p);
+    }
+    const taxi = this.taxiFor(p)!;
+    const accepted = p.tryConvince(this.player, delta * this.player.convinceBonus, 1);
+    if (accepted) {
+      p.startFollowing(taxi);
+      audio.accept();
+      vibrateLight();
+      this.floatText(p.x, p.y - 60, "BORA!", HEX.green);
+      this.convinceTarget = null;
+      this.convinceBar.clear();
+      this.autoConvinceMs = 0;
+    }
   }
 
   /** Botão COMEÇAR do painel de introdução — inicia a etapa MOVER. */
@@ -572,32 +832,72 @@ export class GameScene extends Phaser.Scene {
     this.events.emit("paused", false);
   }
 
-  private endMatch(won?: boolean): void {
+  /**
+   * Termina a partida/fase.
+   * @param won força vitória/derrota; undefined = calcular
+   * @param survived chegou ao fim sem quit
+   */
+  private endMatch(won?: boolean, survived = true): void {
     if (this.ended) return;
     this.ended = true;
+
     const save = SaveManager.load();
     const missions = { ...save.missions };
     this.missions.completedIds().forEach((id) => (missions[id] = true));
+    // Guarda missões concluídas (sem creditar money — o LevelManager trata disso)
+    SaveManager.update({ missions });
+
+    this.economy.stats.bestCombo = this.combo.best;
+
+    if (this.levelMgr) {
+      const forcedLose = won === false;
+      const result = this.levelMgr.finish(this.economy.stats, this.combo.level, {
+        survived: survived && !forcedLose,
+        forcedLose,
+        reputationTotal: save.reputation + this.economy.stats.reputation,
+      });
+      // Se won foi forçado a true (early win), garante
+      if (won === true && !result.won) {
+        // Objectivos primários deviam estar done — recalcula
+      }
+      this.levelMgr.commit(result);
+      this.registry.set("tutorial", false);
+      this.registry.set("lastPhase", this.levelMgr.phaseId);
+      this.scene.stop("HUD");
+      this.scene.start("Result", {
+        stats: result.stats,
+        won: result.won,
+        tutorial: this.tutorialMode,
+        levelResult: result,
+      });
+      return;
+    }
+
+    // Modo livre (sem fase)
     const stats = {
       ...this.economy.stats,
       bestCombo: this.combo.best,
       objectivesTotal: this.missions.progress.length,
-      objectivesCompleted: this.missions.progress.filter((mission) => mission.done).length,
-      promoted: this.missions.progress.length > 0 && this.missions.progress.every((mission) => mission.done),
+      objectivesCompleted: this.missions.progress.filter((m) => m.done).length,
+      promoted:
+        this.missions.progress.length > 0 && this.missions.progress.every((m) => m.done),
     };
     const patch: Partial<SaveData> = {
       money: save.money + stats.money,
-      missions,
+      xp: save.xp + stats.xp,
       bestScore: Math.max(save.bestScore, stats.money),
     };
     if (this.tutorialMode && won === true) {
       patch.tutorialDone = true;
-      // Limpa a flag do registo para que "JOGAR OUTRA VEZ" inicie um jogo
-      // normal e não repita o tutorial infinitamente.
       this.registry.set("tutorial", false);
     }
     SaveManager.update(patch);
     this.scene.stop("HUD");
-    this.scene.start("Result", { stats, won: won ?? null, tutorial: this.tutorialMode });
+    this.scene.start("Result", {
+      stats,
+      won: won ?? null,
+      tutorial: this.tutorialMode,
+      levelResult: null as LevelResult | null,
+    });
   }
 }
