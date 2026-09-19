@@ -19,6 +19,8 @@ import { PowerUpManager } from "../systems/PowerUpManager";
 import { LevelManager } from "../systems/LevelManager";
 import { SaveManager } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
+import { ObjectiveGuide, highlightMatchingTaxis } from "../systems/ObjectiveGuide";
+import { vibrateFail, vibrateReward, vibrateLight } from "../systems/Feedback";
 import {
   PassengerState,
   PowerUpType,
@@ -60,10 +62,17 @@ export class GameScene extends Phaser.Scene {
   private tutorialTimerStarted = false;
   /** Camada guiada do nível 1 — null fora do tutorial. */
   tutorialCtl: TutorialController | null = null;
+  /** Waypoints fora do tutorial. */
+  private objectiveGuide: ObjectiveGuide | null = null;
   private wasRunning = false;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private obstacles!: Phaser.Physics.Arcade.StaticGroup;
   private callRing!: Phaser.GameObjects.Arc;
+  /** Barra de progresso ao convencer (feedback visual). */
+  private convinceBar!: Phaser.GameObjects.Graphics;
+  private convinceTarget: Passenger | null = null;
+  private autoConvinceMs = 0;
+  private lastBumpMs = 0;
   /** Lado da estrada do jogador (para contar travessias). */
   private lastRoadSide: "above" | "on" | "below" = "above";
   private crossingCooldown = 0;
@@ -162,9 +171,13 @@ export class GameScene extends Phaser.Scene {
     if (this.levelMgr) {
       this.levelMgr.objectives.onComplete = (obj) => {
         this.floatText(this.player.x, this.player.y - 70, `✓ ${obj.label}`, HEX.gold);
-        audio.reward();
+        audio.objectiveComplete();
+        vibrateReward();
       };
     }
+
+    this.convinceBar = this.add.graphics().setDepth(200000);
+    this.objectiveGuide = new ObjectiveGuide(this);
 
     // ── Spawns iniciais conforme a fase ──────────────────────────────
     const npcTarget = spawnCfg?.npcCount ?? this.difficulty.current.npcCount;
@@ -215,6 +228,8 @@ export class GameScene extends Phaser.Scene {
       this.pedestrians = [];
       this.tutorialCtl = null;
       this.levelMgr = null;
+      this.objectiveGuide?.destroy();
+      this.objectiveGuide = null;
     });
   }
 
@@ -404,11 +419,15 @@ export class GameScene extends Phaser.Scene {
   private interact(): void {
     if (this.paused || this.ended) return;
     const p = this.nearestPassenger(BALANCE.interactRadius * 1.4);
-    if (!p) return;
+    if (!p) {
+      this.floatText(this.player.x, this.player.y - 50, "CHEGA MAIS PERTO", HEX.muted);
+      return;
+    }
     this.player.playOnce("interact", 260);
     const taxi = this.taxiFor(p);
     if (!taxi) {
       this.floatText(p.x, p.y - 60, "SEM TÁXI PARA " + p.destination, HEX.red);
+      vibrateLight();
       return;
     }
     // Marca disputa se algum rival também mira este passageiro
@@ -418,11 +437,15 @@ export class GameScene extends Phaser.Scene {
         break;
       }
     }
+    this.convinceTarget = p;
     const accepted = p.tryConvince(this.player, 420 * this.player.convinceBonus, 1);
     if (accepted) {
       p.startFollowing(taxi);
       audio.accept();
+      vibrateLight();
       this.floatText(p.x, p.y - 60, "BORA!", HEX.green);
+      this.convinceTarget = null;
+      this.convinceBar.clear();
     }
   }
 
@@ -453,6 +476,9 @@ export class GameScene extends Phaser.Scene {
     if (touched > 0) {
       this.economy.registerCall();
       this.floatText(this.player.x, this.player.y - 60, `${touched} OUVIRAM!`, HEX.yellow);
+      vibrateLight();
+    } else {
+      this.floatText(this.player.x, this.player.y - 60, "NINGUÉM OUVIU!", HEX.muted);
     }
   }
 
@@ -474,14 +500,20 @@ export class GameScene extends Phaser.Scene {
       const gained = this.economy.addPassenger(p.value, this.combo.multiplier);
       this.floatText(taxi.x, taxi.y - 80, `+${gained} Kz`, HEX.gold);
       audio.reward();
+      vibrateReward();
       if (this.disputedPassengers.has(p)) {
         this.economy.registerDisputeWon();
         this.floatText(taxi.x, taxi.y - 50, "DISPUTA VENCIDA!", HEX.yellow);
       }
     } else {
-      this.economy.registerLoss();
+      if (!p.lossCounted) {
+        p.lossCounted = true;
+        this.economy.registerLoss();
+        this.economy.registerPenalty(1);
+      }
       this.floatText(p.x, p.y - 60, "PASSAGEIRO PERDIDO!", HEX.red);
       audio.lost();
+      vibrateFail();
     }
     this.tweens.add({
       targets: p,
@@ -663,10 +695,13 @@ export class GameScene extends Phaser.Scene {
             : null;
       p.tick(delta, leader);
 
-      if (p.state === PassengerState.LEAVING && p.alpha > 0.9) {
+      // Conta perda uma única vez no início do LEAVING.
+      if (p.state === PassengerState.LEAVING && !p.lossCounted) {
+        p.lossCounted = true;
         this.economy.registerLoss();
-        // Perder passageiro conta como penalização leve em fases
-        if (this.levelMgr) this.economy.registerPenalty(0); // lost já está; penalty à parte só para fiscais
+        this.economy.registerPenalty(1);
+        audio.lost();
+        vibrateFail();
       }
 
       if (p.state === PassengerState.FOLLOWING && p.follower === this.player && p.targetTaxi) {
@@ -708,10 +743,85 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.tutorialCtl?.tick(delta);
+    this.tickBumpFeedback();
+    this.objectiveGuide?.tick();
+    highlightMatchingTaxis(this);
+    this.updateConvinceBar();
+    this.tickAutoConvince(delta);
     this.callRing.setPosition(this.player.x, this.player.y);
 
     // Sincroniza timeLeft com LevelManager para o HUD
     if (this.levelMgr) this.timeLeft = this.levelMgr.timeLeft;
+  }
+
+
+  /** SFX + vibração leve ao embater em obstáculos (throttled). */
+  private tickBumpFeedback(): void {
+    const body = this.player.body as Phaser.Physics.Arcade.Body | undefined;
+    if (!body) return;
+    const hit =
+      body.blocked.left || body.blocked.right || body.blocked.up || body.blocked.down ||
+      body.touching.left || body.touching.right || body.touching.up || body.touching.down;
+    if (!hit) return;
+    const now = this.time.now;
+    if (now - this.lastBumpMs < 420) return;
+    this.lastBumpMs = now;
+    audio.bump();
+    vibrateLight();
+  }
+
+  /** Barra amarela sobre o passageiro enquanto o jogador o convence. */
+  private updateConvinceBar(): void {
+    this.convinceBar.clear();
+    const p = this.convinceTarget;
+    if (!p || !p.active || p.state !== PassengerState.APPROACHED) {
+      if (p && (!p.active || p.state !== PassengerState.APPROACHED)) this.convinceTarget = null;
+      return;
+    }
+    const ratio = p.convinceRatio;
+    const w = 48;
+    const x = p.x - w / 2;
+    const y = p.y - 70;
+    this.convinceBar.fillStyle(0x0e1a33, 0.7);
+    this.convinceBar.fillRoundedRect(x, y, w, 7, 3);
+    this.convinceBar.fillStyle(0xffc31f, 1);
+    this.convinceBar.fillRoundedRect(x, y, w * ratio, 7, 3);
+  }
+
+  /**
+   * Auto-convencer: se o jogador ficar ≥0,4s no raio de um passageiro disponível
+   * com táxi compatível, avança o progresso (reduz mis-taps no mobile).
+   */
+  private tickAutoConvince(delta: number): void {
+    if (this.paused || this.ended) return;
+    const p = this.nearestPassenger(BALANCE.interactRadius * 1.2);
+    if (!p || !this.taxiFor(p)) {
+      this.autoConvinceMs = 0;
+      return;
+    }
+    // Já a seguir o jogador — nada a fazer
+    if (p.follower === this.player) {
+      this.autoConvinceMs = 0;
+      return;
+    }
+    this.autoConvinceMs += delta;
+    if (this.autoConvinceMs < 400) return;
+    // Aplica um tick de convencer por frame após o threshold
+    this.convinceTarget = p;
+    for (const npc of this.npcs) {
+      if (npc.ai.target === p) this.disputedPassengers.add(p);
+    }
+    const taxi = this.taxiFor(p)!;
+    const accepted = p.tryConvince(this.player, delta * this.player.convinceBonus, 1);
+    if (accepted) {
+      p.startFollowing(taxi);
+      audio.accept();
+      vibrateLight();
+      this.floatText(p.x, p.y - 60, "BORA!", HEX.green);
+      this.convinceTarget = null;
+      this.convinceBar.clear();
+      this.autoConvinceMs = 0;
+    }
   }
 
   /** Botão COMEÇAR do painel de introdução — inicia a etapa MOVER. */

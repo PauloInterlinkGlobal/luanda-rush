@@ -26,7 +26,32 @@ export class LevelSelectScene extends Phaser.Scene {
     this.scroll = 0;
     this.build(layoutOf(this));
     this.input.once("pointerdown", () => audio.unlock());
+    this.input.on("wheel", (_p: unknown, _g: unknown, _dx: number, dy: number) => {
+      this.applyScroll(this.scroll + dy * 0.45);
+    });
+    let dragY = 0;
+    let dragging = false;
+    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      dragY = p.y;
+      dragging = false;
+    });
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (!p.isDown) return;
+      const dy = dragY - p.y;
+      if (Math.abs(dy) < 6 && !dragging) return;
+      dragging = true;
+      dragY = p.y;
+      this.applyScroll(this.scroll + dy);
+    });
     relayoutOnResize(this, (l) => this.build(l));
+  }
+
+  private maxScroll = 0;
+  private listContent: Phaser.GameObjects.Container | null = null;
+
+  private applyScroll(next: number): void {
+    this.scroll = Phaser.Math.Clamp(next, 0, this.maxScroll);
+    this.listContent?.setY(-this.scroll);
   }
 
   private build(l: Layout): void {
@@ -104,6 +129,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
     let rankHeaderY = listTop;
     const content = this.add.container(0, -this.scroll);
+    this.listContent = content;
     this.layer.add(content);
 
     for (const rank of RANK_TIERS) {
@@ -186,6 +212,8 @@ export class LevelSelectScene extends Phaser.Scene {
       const rows = Math.ceil(phases.length / cols);
       rankHeaderY += rows * (cardH + gap) + l.s(12);
     }
+
+    this.maxScroll = Math.max(0, rankHeaderY - listBottom + l.s(20));
 
     // Rodapé
     const footerY = l.bottom - l.s(28);

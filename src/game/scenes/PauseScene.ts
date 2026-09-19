@@ -81,19 +81,26 @@ export class PauseScene extends Phaser.Scene {
       return;
     }
 
-    this.title(l.y(0.08), "PAUSA", 48, HEX.yellow);
-    this.button(l.y(0.3), "CONTINUAR", () => this.resume(), true);
-    this.button(l.y(0.48), `MÚSICA: ${s.music ? "LIGADA" : "DESLIGADA"}`, () => {
-      SaveManager.update({ settings: { ...s, music: !s.music } });
-      audio.musicEnabled = !s.music;
+    this.title(l.y(0.06), "PAUSA", 40, HEX.yellow);
+    this.button(l.y(0.24), "CONTINUAR", () => this.resume(), true);
+    this.button(l.y(0.4), `MÚSICA: ${s.music ? "LIGADA" : "DESLIGADA"}`, () => {
+      const cur = SaveManager.load().settings;
+      SaveManager.update({ settings: { ...cur, music: !cur.music } });
+      audio.musicEnabled = !cur.music;
       this.render();
     });
-    this.button(l.y(0.64), `EFEITOS: ${s.sfx ? "LIGADOS" : "DESLIGADOS"}`, () => {
-      SaveManager.update({ settings: { ...s, sfx: !s.sfx } });
-      audio.sfxEnabled = !s.sfx;
+    this.button(l.y(0.54), `EFEITOS: ${s.sfx ? "LIGADOS" : "DESLIGADOS"}`, () => {
+      const cur = SaveManager.load().settings;
+      SaveManager.update({ settings: { ...cur, sfx: !cur.sfx } });
+      audio.sfxEnabled = !cur.sfx;
       this.render();
     });
-    this.button(l.y(0.8), "SAIR DA PARTIDA", () => {
+    this.button(l.y(0.68), `VIBRAÇÃO: ${s.vibration ? "LIGADA" : "DESLIGADA"}`, () => {
+      const cur = SaveManager.load().settings;
+      SaveManager.update({ settings: { ...cur, vibration: !cur.vibration } });
+      this.render();
+    });
+    this.button(l.y(0.84), "SAIR DA PARTIDA", () => {
       this.confirming = true;
       this.render();
     });

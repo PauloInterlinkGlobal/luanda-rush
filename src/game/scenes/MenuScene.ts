@@ -279,17 +279,27 @@ export class MenuScene extends Phaser.Scene {
       const s = save.settings;
       const toggle = (t: number, key: "music" | "sfx" | "vibration", name: string) => {
         this.button(inner(t), `${name}: ${s[key] ? "LIGADO" : "DESLIGADO"}`, () => {
-          SaveManager.update({ settings: { ...s, [key]: !s[key] } });
-          audio.musicEnabled = key === "music" ? !s.music : s.music;
-          audio.sfxEnabled = key === "sfx" ? !s.sfx : s.sfx;
+          const cur = SaveManager.load().settings;
+          const next = { ...cur, [key]: !cur[key] };
+          SaveManager.update({ settings: next });
+          if (key === "music") audio.musicEnabled = next.music;
+          if (key === "sfx") audio.sfxEnabled = next.sfx;
           this.render();
         });
       };
-      toggle(0.26, "music", "MÚSICA");
-      toggle(0.44, "sfx", "EFEITOS");
-      toggle(0.62, "vibration", "VIBRAÇÃO");
-      this.button(inner(0.86), `IDIOMA: ${s.language.toUpperCase()}`, () => {
-        SaveManager.update({ settings: { ...s, language: s.language === "pt" ? "en" : "pt" } });
+      toggle(0.2, "music", "MÚSICA");
+      toggle(0.36, "sfx", "EFEITOS");
+      toggle(0.52, "vibration", "VIBRAÇÃO");
+      // Idioma: PT only por agora — toggle EN escondido até haver i18n real.
+      this.label(l.cx, inner(0.66), "IDIOMA: PORTUGUÊS", 14, HEX.muted);
+      this.button(inner(0.82), "APAGAR PROGRESSO", () => {
+        if (typeof window !== "undefined") {
+          const ok = window.confirm(
+            "Apagar todo o progresso neste dispositivo? Esta acção não se pode desfazer.",
+          );
+          if (!ok) return;
+        }
+        SaveManager.reset();
         this.render();
       });
     }

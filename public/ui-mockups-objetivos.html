@@ -1,0 +1,2327 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>O Lotador — UI Mockups · Fases & Objetivos</title>
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       O LOTADOR — Mockups de UI
+       Ecrã de Seleção de Fases + HUD de Objetivos
+       Landscape-first · pixel/retro · paleta do jogo
+       ═══════════════════════════════════════════════════════════ */
+
+    :root {
+      --night: #0e1a33;
+      --deep: #16305c;
+      --blue: #2b5fae;
+      --road: #3b4250;
+      --road-dark: #333947;
+      --sidewalk: #9aa0ab;
+      --dirt: #b08a5a;
+      --dirt-dark: #8a6a42;
+      --sand: #d4b896;
+      --sand-light: #e8d4b8;
+      --grass: #4e8a48;
+      --yellow: #ffc31f;
+      --gold: #ffd94a;
+      --orange: #f07b1d;
+      --red: #e23b3b;
+      --green: #36b45a;
+      --green-bright: #4ade80;
+      --white: #f7f4ec;
+      --muted: #9fb0cc;
+      --black: #171a21;
+      --panel: rgba(14, 26, 51, 0.88);
+      --panel-solid: #0e1a33;
+      --panel-deep: rgba(22, 48, 92, 0.94);
+      --font-display: Impact, "Arial Black", system-ui, sans-serif;
+      --font-body: "Trebuchet MS", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* ── Shell: phone landscape frame ── */
+    .app {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--night);
+    }
+
+    /* ── Top tab switcher (dev chrome — not part of game UI) ── */
+    .dev-bar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #0a1020;
+      border-bottom: 1px solid rgba(255, 195, 31, 0.25);
+      z-index: 100;
+    }
+    .dev-bar .brand {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--yellow);
+      letter-spacing: 0.04em;
+      margin-right: 8px;
+    }
+    .dev-bar .brand span { color: var(--muted); font-family: var(--font-body); font-size: 11px; font-weight: normal; letter-spacing: 0; margin-left: 6px; }
+    .tab-btn {
+      font-family: var(--font-display);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      padding: 6px 14px;
+      border: 2px solid rgba(255, 195, 31, 0.35);
+      background: var(--deep);
+      color: var(--white);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { border-color: var(--yellow); }
+    .tab-btn.active {
+      background: var(--yellow);
+      color: var(--night);
+      border-color: var(--yellow);
+    }
+    .dev-bar .hint {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .screen {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: none;
+    }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SHARED UI primitives
+       ═══════════════════════════════════════════════════════════ */
+    .pixel-title {
+      font-family: var(--font-display);
+      color: var(--yellow);
+      text-shadow: 0 3px 0 #000, 0 0 12px rgba(255, 195, 31, 0.25);
+      letter-spacing: 0.06em;
+      line-height: 1;
+    }
+
+    .ui-card {
+      background: var(--panel);
+      border: 1.5px solid rgba(255, 195, 31, 0.35);
+      border-radius: 10px;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .btn {
+      font-family: var(--font-display);
+      letter-spacing: 0.06em;
+      border: 3px solid var(--night);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.6);
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, #ffd94a 0%, #ffc31f 55%, #e5a80a 100%);
+      color: var(--night);
+      box-shadow: 0 4px 0 #a87a00, 0 6px 14px rgba(0, 0, 0, 0.35);
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
+    .btn-ghost {
+      background: var(--deep);
+      color: var(--white);
+      border-color: rgba(255, 195, 31, 0.45);
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    /* Stars */
+    .stars { display: inline-flex; gap: 2px; }
+    .star {
+      width: 14px; height: 14px;
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      background: #3a4560;
+    }
+    .star.filled { background: var(--gold); filter: drop-shadow(0 0 3px rgba(255, 217, 74, 0.7)); }
+    .star.small { width: 11px; height: 11px; }
+
+    /* Objective type icons (shared) */
+    .obj-icon {
+      width: 22px; height: 22px;
+      border-radius: 5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .obj-icon.passengers { background: rgba(43, 95, 174, 0.55); }
+    .obj-icon.money { background: rgba(255, 195, 31, 0.25); }
+    .obj-icon.trips { background: rgba(240, 123, 29, 0.35); }
+    .obj-icon.rival { background: rgba(226, 59, 59, 0.35); }
+    .obj-icon.destination { background: rgba(78, 138, 72, 0.4); }
+    .obj-icon.collisions { background: rgba(159, 176, 204, 0.25); }
+
+    /* ═══════════════════════════════════════════════════════════
+       SCREEN 1 — LEVEL SELECT
+       ═══════════════════════════════════════════════════════════ */
+    #screen-levels {
+      /* Pixel-art street backdrop */
+      background:
+        /* crosswalk stripes near bottom */
+        repeating-linear-gradient(
+          90deg,
+          transparent 0 18px,
+          rgba(245, 242, 232, 0.55) 18px 28px
+        ) 0 78% / 100% 14px no-repeat,
+        /* road band */
+        linear-gradient(180deg, transparent 62%, var(--road-dark) 62%, var(--road) 78%, var(--dirt-dark) 78%, var(--dirt) 100%),
+        /* sidewalk strip */
+        linear-gradient(180deg, transparent 56%, var(--sidewalk) 56%, #848a95 62%, transparent 62%),
+        /* dirt/sand streets of Luanda */
+        radial-gradient(ellipse 80% 50% at 30% 40%, rgba(212, 184, 150, 0.35), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 75% 55%, rgba(176, 138, 90, 0.4), transparent 55%),
+        linear-gradient(180deg, #6b8f5a 0%, #5a7a4a 18%, var(--sand) 18%, var(--dirt) 55%, var(--dirt-dark) 100%);
+    }
+
+    /* decorative bus stop silhouette */
+    #screen-levels::before {
+      content: "";
+      position: absolute;
+      right: 6%;
+      bottom: 22%;
+      width: 70px;
+      height: 48px;
+      background:
+        linear-gradient(var(--blue), var(--blue)) 0 0 / 100% 10px no-repeat,
+        linear-gradient(#c8ced8, #c8ced8) 4px 10px / 8px 38px no-repeat,
+        linear-gradient(#c8ced8, #c8ced8) 58px 10px / 8px 38px no-repeat,
+        linear-gradient(rgba(14, 26, 51, 0.55), rgba(14, 26, 51, 0.55)) 4px 14px / 62px 28px no-repeat;
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .levels-header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px 6px;
+      flex: 0 0 auto;
+    }
+    .levels-header .back-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--panel);
+      border: 2px solid rgba(255, 195, 31, 0.5);
+      color: var(--yellow);
+      font-family: var(--font-display);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .levels-header .titles { flex: 1; min-width: 0; }
+    .levels-header h1 {
+      font-size: clamp(22px, 4.5vw, 32px);
+    }
+    .levels-header .tagline {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .levels-header .progress-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--gold);
+      font-family: var(--font-display);
+      white-space: nowrap;
+    }
+    .levels-header .progress-chip .bar {
+      width: 72px; height: 8px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 195, 31, 0.3);
+    }
+    .levels-header .progress-chip .bar > i {
+      display: block; height: 100%;
+      background: linear-gradient(90deg, var(--yellow), var(--gold));
+      border-radius: 3px;
+    }
+
+    /* Chapter tabs */
+    .chapter-tabs {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 6px;
+      padding: 4px 16px 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex: 0 0 auto;
+    }
+    .chapter-tabs::-webkit-scrollbar { display: none; }
+    .chapter-tab {
+      flex: 0 0 auto;
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 2px solid rgba(255, 195, 31, 0.25);
+      background: rgba(14, 26, 51, 0.7);
+      color: var(--muted);
+      font-family: var(--font-display);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .chapter-tab .ch-num {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .chapter-tab.active {
+      background: var(--deep);
+      border-color: var(--yellow);
+      color: var(--yellow);
+      box-shadow: 0 0 0 1px rgba(255, 195, 31, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .chapter-tab.active .ch-num {
+      background: var(--yellow);
+      color: var(--night);
+    }
+    .chapter-tab.locked {
+      opacity: 0.5;
+      filter: grayscale(0.4);
+    }
+    .chapter-tab .lock-mini { font-size: 10px; }
+
+    /* Main body: level list + detail */
+    .levels-body {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr minmax(220px, 32%);
+      gap: 12px;
+      padding: 0 14px 12px;
+      min-height: 0;
+    }
+
+    .levels-list {
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--yellow) transparent;
+    }
+    .levels-list::-webkit-scrollbar { width: 6px; }
+    .levels-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 195, 31, 0.45);
+      border-radius: 3px;
+    }
+
+    /* Level card */
+    .level-card {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.12s, background 0.12s;
+      position: relative;
+    }
+    .level-card:hover:not(.locked) {
+      transform: translateX(3px);
+      border-color: rgba(255, 195, 31, 0.7);
+    }
+    .level-card.selected {
+      border-color: var(--yellow);
+      background: rgba(22, 48, 92, 0.95);
+      box-shadow: 0 0 0 1px var(--yellow), 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+    .level-card.locked {
+      filter: saturate(0.35) brightness(0.75);
+      cursor: not-allowed;
+    }
+    .level-card.completed {
+      border-color: rgba(54, 180, 90, 0.45);
+    }
+
+    .level-num {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(160deg, var(--deep), var(--night));
+      border: 2px solid rgba(255, 195, 31, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      color: var(--yellow);
+      line-height: 1;
+      position: relative;
+    }
+    .level-num .n { font-size: 18px; }
+    .level-num .lbl { font-size: 8px; color: var(--muted); letter-spacing: 0.05em; margin-top: 2px; }
+    .level-card.completed .level-num {
+      border-color: var(--green);
+      background: linear-gradient(160deg, #1a4a2e, var(--night));
+    }
+    .level-card.locked .level-num {
+      border-color: #4a5568;
+      color: var(--muted);
+    }
+    .level-num .lock-badge {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(14, 26, 51, 0.7);
+      border-radius: 8px;
+      font-size: 18px;
+    }
+
+    .level-info { min-width: 0; }
+    .level-info .name {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--white);
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .level-info .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .level-info .meta .status-pill {
+      padding: 1px 7px;
+      border-radius: 8px;
+      font-size: 9px;
+      font-family: var(--font-display);
+      letter-spacing: 0.04em;
+    }
+    .status-pill.done { background: rgba(54, 180, 90, 0.25); color: var(--green-bright); }
+    .status-pill.open { background: rgba(255, 195, 31, 0.2); color: var(--yellow); }
+    .status-pill.lock { background: rgba(159, 176, 204, 0.15); color: var(--muted); }
+
+    .level-objectives-preview {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: 110px;
+    }
+    .level-objectives-preview .obj-icon {
+      width: 24px; height: 24px;
+      font-size: 12px;
+    }
+    .level-card.locked .level-objectives-preview { opacity: 0.4; }
+
+    /* Detail panel */
+    .level-detail {
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .level-detail .detail-empty {
+      margin: auto;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 20px;
+    }
+    .level-detail .detail-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .level-detail .big-num {
+      width: 56px; height: 56px;
+      border-radius: 12px;
+      background: linear-gradient(160deg, var(--blue), var(--deep));
+      border: 2px solid var(--yellow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 26px;
+      color: var(--yellow);
+      flex-shrink: 0;
+      text-shadow: 0 2px 0 #000;
+    }
+    .level-detail .detail-titles h2 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--white);
+      letter-spacing: 0.04em;
+    }
+    .level-detail .detail-titles .chapter {
+      font-size: 11px;
+      color: var(--yellow);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .level-detail .detail-stars {
+      margin-top: 6px;
+    }
+    .level-detail .detail-stars .star { width: 16px; height: 16px; }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .stat-chip {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .stat-chip .k {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .stat-chip .v {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--white);
+      margin-top: 2px;
+    }
+    .stat-chip .v.gold { color: var(--gold); }
+    .stat-chip .v.red { color: var(--red); }
+
+    .detail-objectives-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--yellow);
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+    .detail-obj-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      margin-bottom: 12px;
+    }
+    .detail-obj-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: rgba(0, 0, 0, 0.28);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+    .detail-obj-row .desc {
+      flex: 1;
+      color: var(--white);
+      line-height: 1.2;
+    }
+    .detail-obj-row .tgt {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .play-btn {
+      width: 100%;
+      height: 48px;
+      font-size: 18px;
+      margin-top: auto;
+    }
+    .play-btn .sub {
+      font-family: var(--font-body);
+      font-size: 10px;
+      opacity: 0.75;
+      font-weight: normal;
+      letter-spacing: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SCREEN 2 — IN-GAME OBJECTIVES HUD
+       ═══════════════════════════════════════════════════════════ */
+    #screen-hud {
+      background:
+        /* fake game world */
+        linear-gradient(180deg,
+          #5a7a4a 0%,
+          #6b8f5a 12%,
+          var(--sand) 12%,
+          var(--dirt) 45%,
+          var(--road-dark) 55%,
+          var(--road) 70%,
+          var(--dirt-dark) 85%,
+          var(--dirt) 100%
+        );
+    }
+
+    /* Fake game world decorations */
+    .fake-world {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .fake-world .road-line {
+      position: absolute;
+      left: 0; right: 0;
+      top: 62%;
+      height: 3px;
+      background: repeating-linear-gradient(90deg, var(--yellow) 0 24px, transparent 24px 48px);
+      opacity: 0.5;
+    }
+    .fake-world .crosswalk {
+      position: absolute;
+      left: 35%;
+      top: 55%;
+      width: 80px;
+      height: 60px;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(245, 242, 232, 0.7) 0 8px,
+        transparent 8px 16px
+      );
+      opacity: 0.6;
+    }
+    .fake-world .bus-stop {
+      position: absolute;
+      left: 18%;
+      top: 38%;
+      width: 90px;
+      height: 60px;
+    }
+    .fake-world .bus-stop .roof {
+      height: 12px;
+      background: var(--blue);
+      border-radius: 2px 2px 0 0;
+      box-shadow: 0 2px 0 #1a3a70;
+    }
+    .fake-world .bus-stop .post-l,
+    .fake-world .bus-stop .post-r {
+      position: absolute;
+      top: 12px;
+      width: 8px;
+      height: 48px;
+      background: #c8ced8;
+    }
+    .fake-world .bus-stop .post-l { left: 4px; }
+    .fake-world .bus-stop .post-r { right: 4px; }
+    .fake-world .bus-stop .bench {
+      position: absolute;
+      left: 12px; right: 12px;
+      bottom: 8px;
+      height: 10px;
+      background: rgba(14, 26, 51, 0.5);
+    }
+    .fake-world .floating-tag {
+      position: absolute;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: var(--font-display);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+    .fake-world .tag-red {
+      background: var(--red);
+      color: white;
+      left: 28%;
+      top: 32%;
+    }
+    .fake-world .tag-green {
+      background: var(--green);
+      color: white;
+      left: 55%;
+      top: 42%;
+    }
+    .fake-world .npc {
+      position: absolute;
+      width: 28px;
+      height: 40px;
+      background:
+        radial-gradient(circle at 50% 22%, #c68642 0 7px, transparent 7.5px),
+        linear-gradient(#2b5fae, #2b5fae) 6px 18px / 16px 14px no-repeat,
+        linear-gradient(#1a1a2e, #1a1a2e) 7px 32px / 6px 8px no-repeat,
+        linear-gradient(#1a1a2e, #1a1a2e) 15px 32px / 6px 8px no-repeat;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
+    }
+    .fake-world .npc.n1 { left: 30%; top: 48%; }
+    .fake-world .npc.n2 { left: 58%; top: 50%; }
+    .fake-world .npc.n3 { left: 42%; top: 52%; transform: scaleX(-1); }
+    .fake-world .taxi {
+      position: absolute;
+      right: 12%;
+      top: 58%;
+      width: 72px;
+      height: 36px;
+      background:
+        linear-gradient(#1a3a1a, #1a3a1a) 0 8px / 72px 20px no-repeat,
+        linear-gradient(#2a5a2a, #2a5a2a) 8px 0 / 40px 12px no-repeat,
+        radial-gradient(circle, #222 0 5px, transparent 5.5px) 8px 26px / 12px 12px no-repeat,
+        radial-gradient(circle, #222 0 5px, transparent 5.5px) 52px 26px / 12px 12px no-repeat;
+      opacity: 0.85;
+    }
+
+    /* Existing corner HUDs (mocked to show context) */
+    .hud-corners {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    }
+    .hud-tl {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .hud-tl .logo {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--gold);
+      text-shadow: 0 2px 0 #000;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .hud-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(14, 26, 51, 0.78);
+      border: 1px solid rgba(255, 195, 31, 0.35);
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--white);
+      width: fit-content;
+    }
+    .hud-chip .energy-bar {
+      width: 70px; height: 7px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .hud-chip .energy-bar > i {
+      display: block; height: 100%; width: 72%;
+      background: var(--green);
+      border-radius: 3px;
+    }
+    .hud-tr {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      right: max(10px, env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hud-money-timer {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: rgba(14, 26, 51, 0.78);
+      border: 1px solid rgba(255, 195, 31, 0.35);
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: var(--font-display);
+      font-size: 13px;
+    }
+    .hud-money-timer .seg {
+      padding: 7px 12px;
+    }
+    .hud-money-timer .seg.money { color: var(--gold); }
+    .hud-money-timer .seg.timer { color: var(--white); }
+    .hud-money-timer .seg.timer.urgent { color: var(--red); }
+    .hud-money-timer .divider {
+      width: 2px; height: 16px;
+      background: rgba(255, 195, 31, 0.45);
+    }
+    .hud-pause {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: rgba(14, 26, 51, 0.85);
+      border: 2px solid rgba(255, 195, 31, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--white);
+    }
+
+    /* ── THE OBJECTIVES HUD (deliverable #2) ── */
+    .objectives-hud {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      max-width: min(520px, calc(100% - 280px));
+      width: max-content;
+      min-width: 160px;
+      pointer-events: auto;
+    }
+
+    .objectives-hud .hud-label {
+      font-family: var(--font-display);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      color: rgba(255, 195, 31, 0.75);
+      text-transform: uppercase;
+      text-shadow: 0 1px 2px #000;
+      line-height: 1;
+    }
+
+    .objectives-track {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    /* Single objective pill with progress bar */
+    .obj-pill {
+      --pill-accent: var(--blue);
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 7px;
+      row-gap: 3px;
+      align-items: center;
+      padding: 5px 10px 6px 6px;
+      background: rgba(14, 26, 51, 0.88);
+      border: 1.5px solid rgba(255, 195, 31, 0.3);
+      border-radius: 10px;
+      min-width: 0;
+      flex: 1 1 auto;
+      max-width: 240px;
+      min-width: 140px;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 6px 14px rgba(0, 0, 0, 0.25);
+      transition: border-color 0.25s, background 0.25s, transform 0.25s, box-shadow 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Density: 1 objective = wider centered; 4 = compact */
+    .objectives-track[data-count="1"] .obj-pill {
+      flex: 0 1 280px;
+      max-width: 300px;
+      min-width: 200px;
+    }
+    .objectives-track[data-count="2"] .obj-pill {
+      flex: 1 1 180px;
+      max-width: 240px;
+    }
+    .objectives-track[data-count="3"] .obj-pill,
+    .objectives-track[data-count="4"] .obj-pill {
+      flex: 1 1 140px;
+      max-width: 200px;
+      min-width: 130px;
+      padding: 4px 8px 5px 5px;
+    }
+
+    .obj-pill .obj-icon {
+      grid-row: 1 / 3;
+      width: 26px; height: 26px;
+      font-size: 14px;
+      border-radius: 7px;
+      border-color: color-mix(in srgb, var(--pill-accent) 50%, transparent);
+      background: color-mix(in srgb, var(--pill-accent) 30%, rgba(0,0,0,0.4));
+    }
+    .obj-pill .obj-text {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--white);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.15;
+      grid-column: 2;
+    }
+    .obj-pill .obj-text .frac {
+      color: var(--gold);
+      margin-left: 2px;
+    }
+    .obj-pill .obj-bar {
+      grid-column: 2;
+      height: 5px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .obj-pill .obj-bar > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--pill-accent), color-mix(in srgb, var(--pill-accent) 70%, white));
+      border-radius: 2px;
+      transition: width 0.4s ease-out;
+    }
+
+    /* Type accent colors */
+    .obj-pill[data-type="PASSENGERS_DELIVERED"] { --pill-accent: #2b5fae; }
+    .obj-pill[data-type="MONEY_EARNED"] { --pill-accent: #ffc31f; }
+    .obj-pill[data-type="FULL_CAPACITY_TRIPS"] { --pill-accent: #f07b1d; }
+    .obj-pill[data-type="BEAT_RIVAL"] { --pill-accent: #e23b3b; }
+    .obj-pill[data-type="SPECIFIC_DESTINATION"] { --pill-accent: #36b45a; }
+    .obj-pill[data-type="NO_COLLISIONS"] { --pill-accent: #9fb0cc; }
+
+    /* ── COMPLETED state (ready for animation) ── */
+    .obj-pill.completed {
+      border-color: var(--green);
+      background: rgba(20, 55, 35, 0.92);
+      box-shadow: 0 0 0 1px rgba(54, 180, 90, 0.4), 0 3px 0 rgba(0, 0, 0, 0.3), 0 0 16px rgba(54, 180, 90, 0.25);
+    }
+    .obj-pill.completed .obj-icon {
+      background: rgba(54, 180, 90, 0.45);
+      border-color: var(--green);
+    }
+    .obj-pill.completed .obj-text {
+      color: var(--green-bright);
+      text-decoration: line-through;
+      text-decoration-color: rgba(74, 222, 128, 0.55);
+      text-decoration-thickness: 1.5px;
+    }
+    .obj-pill.completed .obj-text .frac { color: var(--green-bright); }
+    .obj-pill.completed .obj-bar > i {
+      width: 100% !important;
+      background: linear-gradient(90deg, #1e7a3a, var(--green-bright));
+    }
+    .obj-pill.completed::after {
+      content: "✓";
+      position: absolute;
+      top: 3px;
+      right: 6px;
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--green-bright);
+      text-shadow: 0 0 6px rgba(54, 180, 90, 0.8);
+    }
+
+    /* Pulse hook for "just completed" animation */
+    .obj-pill.just-completed {
+      animation: obj-complete-pop 0.55s ease-out;
+    }
+    @keyframes obj-complete-pop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.08); box-shadow: 0 0 20px rgba(54, 180, 90, 0.6); }
+      100% { transform: scale(1); }
+    }
+
+    /* Demo controls for HUD screen */
+    .hud-demo-controls {
+      position: absolute;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: rgba(14, 26, 51, 0.9);
+      border: 1px solid rgba(255, 195, 31, 0.35);
+      border-radius: 12px;
+      max-width: 95%;
+    }
+    .hud-demo-controls .label {
+      width: 100%;
+      text-align: center;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+      margin-bottom: 2px;
+    }
+    .hud-demo-controls button {
+      font-family: var(--font-display);
+      font-size: 11px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1.5px solid rgba(255, 195, 31, 0.4);
+      background: var(--deep);
+      color: var(--white);
+      cursor: pointer;
+      letter-spacing: 0.03em;
+    }
+    .hud-demo-controls button:hover { border-color: var(--yellow); color: var(--yellow); }
+    .hud-demo-controls button.active {
+      background: var(--yellow);
+      color: var(--night);
+      border-color: var(--yellow);
+    }
+
+    /* Touch controls placeholders (bottom corners — to show HUD doesn't collide) */
+    .fake-controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+    }
+    .fake-stick {
+      position: absolute;
+      left: max(16px, env(safe-area-inset-left));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      width: 88px; height: 88px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 195, 31, 0.4);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .fake-stick::after {
+      content: "";
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 36px; height: 36px;
+      margin: -18px 0 0 -18px;
+      border-radius: 50%;
+      background: rgba(255, 195, 31, 0.55);
+    }
+    .fake-actions {
+      position: absolute;
+      right: max(14px, env(safe-area-inset-right));
+      bottom: max(14px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    .fake-actions .fab {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--yellow);
+      border: 3px solid var(--night);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 3px 0 #a87a00;
+      color: var(--night);
+      font-family: var(--font-display);
+      font-size: 9px;
+      line-height: 1.1;
+    }
+    .fake-actions .fab .ico { font-size: 16px; }
+    .fake-actions .fab.blue { background: var(--blue); color: var(--white); box-shadow: 0 3px 0 #1a3a70; }
+
+    /* Portrait warning */
+    .rotate-hint {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #0b0f1c;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+    .rotate-hint .phone {
+      font-size: 48px;
+      animation: tilt 1.6s ease-in-out infinite;
+    }
+    @keyframes tilt {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-90deg); }
+    }
+    .rotate-hint p {
+      font-family: var(--font-display);
+      color: var(--yellow);
+      font-size: 18px;
+      letter-spacing: 0.05em;
+    }
+    .rotate-hint span { color: var(--muted); font-family: var(--font-body); font-size: 13px; }
+
+    @media (orientation: portrait) and (max-width: 700px) {
+      .rotate-hint { display: flex; }
+      .app { visibility: hidden; }
+    }
+
+    /* Responsive tweaks for short landscape phones */
+    @media (max-height: 420px) {
+      .levels-header { padding: 6px 12px 2px; }
+      .levels-header h1 { font-size: 20px; }
+      .chapter-tabs { padding: 2px 12px 4px; }
+      .levels-body { padding: 0 10px 8px; gap: 8px; }
+      .level-card { padding: 7px 10px; }
+      .level-num { width: 38px; height: 38px; }
+      .level-num .n { font-size: 15px; }
+      .play-btn { height: 40px; font-size: 15px; }
+      .objectives-hud { max-width: min(480px, calc(100% - 240px)); }
+      .obj-pill { min-width: 120px; }
+    }
+
+    @media (max-width: 700px) {
+      .levels-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+      }
+      .level-detail {
+        max-height: 42%;
+      }
+      .objectives-hud {
+        max-width: calc(100% - 40px);
+        top: 52px;
+      }
+      .hud-tl .logo { font-size: 14px; }
+      .hud-chip { font-size: 10px; padding: 4px 8px; }
+      .hud-money-timer { font-size: 11px; }
+      .hud-money-timer .seg { padding: 5px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="rotate-hint" aria-hidden="true">
+    <div class="phone">📱</div>
+    <p>RODA O TELEMÓVEL</p>
+    <span>O Lotador joga-se em modo paisagem</span>
+  </div>
+
+  <div class="app">
+    <div class="dev-bar">
+      <div class="brand">LOTADOR <span>UI Mockups</span></div>
+      <button class="tab-btn active" data-screen="levels" type="button">1 · Seleção de Fases</button>
+      <button class="tab-btn" data-screen="hud" type="button">2 · HUD de Objetivos</button>
+      <div class="hint">Landscape · pixel/retro · dados de exemplo</div>
+    </div>
+
+    <!-- ══════════════ SCREEN 1: LEVEL SELECT ══════════════ -->
+    <section id="screen-levels" class="screen active" aria-label="Seleção de fases">
+      <header class="levels-header">
+        <button class="back-btn" type="button" title="Voltar" aria-label="Voltar">‹</button>
+        <div class="titles">
+          <h1 class="pixel-title">FASES</h1>
+          <div class="tagline">Corre · Chama · Lota · Ganha</div>
+        </div>
+        <div class="progress-chip ui-card">
+          <span id="global-progress-label">7/24</span>
+          <div class="bar"><i id="global-progress-bar" style="width:29%"></i></div>
+        </div>
+      </header>
+
+      <nav class="chapter-tabs" id="chapter-tabs" aria-label="Capítulos"></nav>
+
+      <div class="levels-body">
+        <div class="levels-list" id="levels-list" role="list"></div>
+
+        <aside class="level-detail ui-card" id="level-detail">
+          <div class="detail-empty">Selecciona uma fase</div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ══════════════ SCREEN 2: OBJECTIVES HUD ══════════════ -->
+    <section id="screen-hud" class="screen" aria-label="HUD de objetivos">
+      <div class="fake-world" aria-hidden="true">
+        <div class="bus-stop">
+          <div class="roof"></div>
+          <div class="post-l"></div>
+          <div class="post-r"></div>
+          <div class="bench"></div>
+        </div>
+        <div class="floating-tag tag-red">Apressado</div>
+        <div class="floating-tag tag-green">CENTRO</div>
+        <div class="npc n1"></div>
+        <div class="npc n2"></div>
+        <div class="npc n3"></div>
+        <div class="crosswalk"></div>
+        <div class="road-line"></div>
+        <div class="taxi"></div>
+      </div>
+
+      <!-- Existing corner HUDs (context) -->
+      <div class="hud-corners" aria-hidden="true">
+        <div class="hud-tl">
+          <div class="logo">LOTADOR</div>
+          <div class="hud-chip">
+            <span>⚡</span>
+            <div class="energy-bar"><i></i></div>
+            <span>72%</span>
+          </div>
+          <div class="hud-chip">🎯 OBJ. <span style="background:#ffc31f;color:#0e1a33;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-left:2px">1</span></div>
+        </div>
+        <div class="hud-tr">
+          <div class="hud-money-timer">
+            <div class="seg money">💰 320 Kz</div>
+            <div class="divider"></div>
+            <div class="seg timer" id="hud-timer-seg">⏱ 1:42</div>
+          </div>
+          <div class="hud-pause">Ⅱ</div>
+        </div>
+      </div>
+
+      <!-- ★ OBJECTIVES HUD — the actual deliverable -->
+      <div class="objectives-hud" id="objectives-hud" role="region" aria-label="Objectivos da fase">
+        <div class="hud-label">Objectivos</div>
+        <div class="objectives-track" id="objectives-track" data-count="1"></div>
+      </div>
+
+      <div class="fake-controls" aria-hidden="true">
+        <div class="fake-stick"></div>
+        <div class="fake-actions">
+          <div class="fab"><span class="ico">🚕</span>CHAMAR</div>
+          <div class="fab blue"><span class="ico">🏃</span>CORRER</div>
+        </div>
+      </div>
+
+      <div class="hud-demo-controls">
+        <div class="label">Demo — troca o conjunto de objectivos</div>
+        <button type="button" class="active" data-demo="1">Nível 1 · 1 obj</button>
+        <button type="button" data-demo="5">Nível 5 · 2 obj</button>
+        <button type="button" data-demo="10">Nível 10 · 3 obj</button>
+        <button type="button" data-demo="18">Nível 18 · 4 obj</button>
+        <button type="button" data-demo="complete" id="btn-complete-one">✓ Completar 1</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════
+       DATA MODEL
+       ═══════════════════════════════════════════════════════════ */
+
+    /** @typedef {"PASSENGERS_DELIVERED"|"SPECIFIC_DESTINATION"|"MONEY_EARNED"|"FULL_CAPACITY_TRIPS"|"BEAT_RIVAL"|"NO_COLLISIONS"} ObjectiveType */
+
+    /**
+     * @typedef {Object} LevelObjective
+     * @property {ObjectiveType} type
+     * @property {number} target_value
+     * @property {number} current_value
+     * @property {boolean} completed
+     * @property {string} description
+     */
+
+    /**
+     * @typedef {Object} LevelData
+     * @property {number} level_number
+     * @property {string} chapter_name
+     * @property {LevelObjective[]} objectives
+     * @property {number} time_limit_seconds
+     * @property {number} rival_count
+     * @property {number} reward_kz
+     * @property {boolean} unlocked
+     * @property {number} stars  // 0-3
+     * @property {string} [bairro]
+     */
+
+    const OBJ_META = {
+      PASSENGERS_DELIVERED: { icon: "🧍", label: "Passageiros", short: "pass." },
+      SPECIFIC_DESTINATION: { icon: "📍", label: "Destino", short: "destino" },
+      MONEY_EARNED:         { icon: "💰", label: "Kwanzas", short: "Kz" },
+      FULL_CAPACITY_TRIPS:  { icon: "🚕", label: "Lotados", short: "lotados" },
+      BEAT_RIVAL:           { icon: "🏁", label: "Rival", short: "rival" },
+      NO_COLLISIONS:        { icon: "🛡️", label: "Sem choques", short: "limpo" },
+    };
+
+    const CHAPTERS = [
+      { id: "cazenga",  name: "Cazenga",   num: 1, color: "#4e8a48" },
+      { id: "viana",    name: "Viana",     num: 2, color: "#2b5fae" },
+      { id: "samba",    name: "Samba",     num: 3, color: "#f07b1d" },
+      { id: "talatona", name: "Talatona",  num: 4, color: "#ffc31f" },
+      { id: "maianga",  name: "Maianga",   num: 5, color: "#e23b3b" },
+      { id: "centro",   name: "Centro",    num: 6, color: "#ffd94a" },
+    ];
+
+    /** @type {LevelData[]} */
+    const LEVELS = [
+      // ── Cap. 1 · Cazenga (tutorial → easy) ──
+      {
+        level_number: 1,
+        chapter_name: "Cazenga",
+        bairro: "Hoji-ya-Henda",
+        time_limit_seconds: 180,
+        rival_count: 0,
+        reward_kz: 300,
+        unlocked: true,
+        stars: 3,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 3,
+            current_value: 3,
+            completed: true,
+            description: "Leva 3 passageiros ao táxi",
+          },
+        ],
+      },
+      {
+        level_number: 2,
+        chapter_name: "Cazenga",
+        bairro: "Tala Hady",
+        time_limit_seconds: 180,
+        rival_count: 0,
+        reward_kz: 350,
+        unlocked: true,
+        stars: 2,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 5,
+            current_value: 5,
+            completed: true,
+            description: "Leva 5 passageiros",
+          },
+        ],
+      },
+      {
+        level_number: 3,
+        chapter_name: "Cazenga",
+        bairro: "Cazenga Popular",
+        time_limit_seconds: 160,
+        rival_count: 0,
+        reward_kz: 400,
+        unlocked: true,
+        stars: 1,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 6,
+            current_value: 6,
+            completed: true,
+            description: "Leva 6 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 200,
+            current_value: 180,
+            completed: false,
+            description: "Ganha 200 Kz",
+          },
+        ],
+      },
+      {
+        level_number: 4,
+        chapter_name: "Cazenga",
+        bairro: "Palanca",
+        time_limit_seconds: 150,
+        rival_count: 0,
+        reward_kz: 450,
+        unlocked: true,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 8,
+            current_value: 0,
+            completed: false,
+            description: "Leva 8 passageiros",
+          },
+        ],
+      },
+
+      // ── Cap. 2 · Viana ──
+      {
+        level_number: 5,
+        chapter_name: "Viana",
+        bairro: "Viana Sede",
+        time_limit_seconds: 150,
+        rival_count: 0,
+        reward_kz: 550,
+        unlocked: true,
+        stars: 2,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 8,
+            current_value: 5,
+            completed: false,
+            description: "Leva 8 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 500,
+            current_value: 320,
+            completed: false,
+            description: "Ganha 500 Kz",
+          },
+        ],
+      },
+      {
+        level_number: 6,
+        chapter_name: "Viana",
+        bairro: "Estalagem",
+        time_limit_seconds: 140,
+        rival_count: 0,
+        reward_kz: 600,
+        unlocked: true,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 10,
+            current_value: 0,
+            completed: false,
+            description: "Leva 10 passageiros",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Lota 1 táxi completo",
+          },
+        ],
+      },
+      {
+        level_number: 7,
+        chapter_name: "Viana",
+        bairro: "Zango",
+        time_limit_seconds: 140,
+        rival_count: 0,
+        reward_kz: 650,
+        unlocked: true,
+        stars: 0,
+        objectives: [
+          {
+            type: "MONEY_EARNED",
+            target_value: 700,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 700 Kz",
+          },
+          {
+            type: "SPECIFIC_DESTINATION",
+            target_value: 4,
+            current_value: 0,
+            completed: false,
+            description: "4 para Viana",
+          },
+        ],
+      },
+      {
+        level_number: 8,
+        chapter_name: "Viana",
+        bairro: "Calumbo",
+        time_limit_seconds: 130,
+        rival_count: 1,
+        reward_kz: 700,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 10,
+            current_value: 0,
+            completed: false,
+            description: "Leva 10 passageiros",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Vence o rival",
+          },
+        ],
+      },
+
+      // ── Cap. 3 · Samba ──
+      {
+        level_number: 9,
+        chapter_name: "Samba",
+        bairro: "Morro Bento",
+        time_limit_seconds: 130,
+        rival_count: 1,
+        reward_kz: 800,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 12,
+            current_value: 0,
+            completed: false,
+            description: "Leva 12 passageiros",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 2,
+            current_value: 0,
+            completed: false,
+            description: "2 viagens lotadas",
+          },
+        ],
+      },
+      {
+        level_number: 10,
+        chapter_name: "Samba",
+        bairro: "Futungo",
+        time_limit_seconds: 120,
+        rival_count: 1,
+        reward_kz: 900,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 12,
+            current_value: 7,
+            completed: false,
+            description: "Leva 12 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 1000,
+            current_value: 640,
+            completed: false,
+            description: "Ganha 1000 Kz",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Vence o rival",
+          },
+        ],
+      },
+      {
+        level_number: 11,
+        chapter_name: "Samba",
+        bairro: "Benfica",
+        time_limit_seconds: 120,
+        rival_count: 1,
+        reward_kz: 950,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 3,
+            current_value: 0,
+            completed: false,
+            description: "3 viagens lotadas",
+          },
+          {
+            type: "SPECIFIC_DESTINATION",
+            target_value: 5,
+            current_value: 0,
+            completed: false,
+            description: "5 para Talatona",
+          },
+          {
+            type: "NO_COLLISIONS",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Sem colisões",
+          },
+        ],
+      },
+
+      // ── Cap. 4 · Talatona ──
+      {
+        level_number: 12,
+        chapter_name: "Talatona",
+        bairro: "Talatona City",
+        time_limit_seconds: 110,
+        rival_count: 1,
+        reward_kz: 1100,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 14,
+            current_value: 0,
+            completed: false,
+            description: "Leva 14 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 1500,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 1500 Kz",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Vence o rival",
+          },
+        ],
+      },
+      {
+        level_number: 13,
+        chapter_name: "Talatona",
+        bairro: "Camama",
+        time_limit_seconds: 110,
+        rival_count: 2,
+        reward_kz: 1200,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 3,
+            current_value: 0,
+            completed: false,
+            description: "3 viagens lotadas",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 1800,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 1800 Kz",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 2,
+            current_value: 0,
+            completed: false,
+            description: "Vence 2 rivais",
+          },
+        ],
+      },
+      {
+        level_number: 14,
+        chapter_name: "Talatona",
+        bairro: "Kilamba",
+        time_limit_seconds: 100,
+        rival_count: 2,
+        reward_kz: 1300,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 15,
+            current_value: 0,
+            completed: false,
+            description: "Leva 15 passageiros",
+          },
+          {
+            type: "SPECIFIC_DESTINATION",
+            target_value: 6,
+            current_value: 0,
+            completed: false,
+            description: "6 para Centro",
+          },
+          {
+            type: "NO_COLLISIONS",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Sem colisões",
+          },
+        ],
+      },
+
+      // ── Cap. 5 · Maianga ──
+      {
+        level_number: 15,
+        chapter_name: "Maianga",
+        bairro: "Maianga",
+        time_limit_seconds: 100,
+        rival_count: 2,
+        reward_kz: 1500,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 16,
+            current_value: 0,
+            completed: false,
+            description: "Leva 16 passageiros",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 4,
+            current_value: 0,
+            completed: false,
+            description: "4 viagens lotadas",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 2000,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 2000 Kz",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 2,
+            current_value: 0,
+            completed: false,
+            description: "Vence 2 rivais",
+          },
+        ],
+      },
+      {
+        level_number: 16,
+        chapter_name: "Maianga",
+        bairro: "Alvalade",
+        time_limit_seconds: 95,
+        rival_count: 2,
+        reward_kz: 1600,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 18,
+            current_value: 0,
+            completed: false,
+            description: "Leva 18 passageiros",
+          },
+          {
+            type: "SPECIFIC_DESTINATION",
+            target_value: 8,
+            current_value: 0,
+            completed: false,
+            description: "8 para Centro",
+          },
+          {
+            type: "NO_COLLISIONS",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Zero colisões",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 2,
+            current_value: 0,
+            completed: false,
+            description: "Vence 2 rivais",
+          },
+        ],
+      },
+
+      // ── Cap. 6 · Centro (endgame) ──
+      {
+        level_number: 17,
+        chapter_name: "Centro",
+        bairro: "Mutamba",
+        time_limit_seconds: 90,
+        rival_count: 2,
+        reward_kz: 1800,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 20,
+            current_value: 0,
+            completed: false,
+            description: "Leva 20 passageiros",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 4,
+            current_value: 0,
+            completed: false,
+            description: "4 viagens lotadas",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 2500,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 2500 Kz",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 2,
+            current_value: 0,
+            completed: false,
+            description: "Vence 2 rivais",
+          },
+        ],
+      },
+      {
+        level_number: 18,
+        chapter_name: "Centro",
+        bairro: "Baixa de Luanda",
+        time_limit_seconds: 75,
+        rival_count: 3,
+        reward_kz: 2500,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 22,
+            current_value: 14,
+            completed: false,
+            description: "Leva 22 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 3000,
+            current_value: 1850,
+            completed: false,
+            description: "Ganha 3000 Kz",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 5,
+            current_value: 2,
+            completed: false,
+            description: "5 viagens lotadas",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 3,
+            current_value: 1,
+            completed: false,
+            description: "Vence 3 rivais",
+          },
+        ],
+      },
+      {
+        level_number: 19,
+        chapter_name: "Centro",
+        bairro: "Ingombota",
+        time_limit_seconds: 70,
+        rival_count: 3,
+        reward_kz: 3000,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 25,
+            current_value: 0,
+            completed: false,
+            description: "Leva 25 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 3500,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 3500 Kz",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 6,
+            current_value: 0,
+            completed: false,
+            description: "6 viagens lotadas",
+          },
+          {
+            type: "NO_COLLISIONS",
+            target_value: 1,
+            current_value: 0,
+            completed: false,
+            description: "Zero colisões",
+          },
+        ],
+      },
+      {
+        level_number: 20,
+        chapter_name: "Centro",
+        bairro: "Marginal",
+        time_limit_seconds: 60,
+        rival_count: 3,
+        reward_kz: 5000,
+        unlocked: false,
+        stars: 0,
+        objectives: [
+          {
+            type: "PASSENGERS_DELIVERED",
+            target_value: 30,
+            current_value: 0,
+            completed: false,
+            description: "Leva 30 passageiros",
+          },
+          {
+            type: "MONEY_EARNED",
+            target_value: 5000,
+            current_value: 0,
+            completed: false,
+            description: "Ganha 5000 Kz",
+          },
+          {
+            type: "FULL_CAPACITY_TRIPS",
+            target_value: 8,
+            current_value: 0,
+            completed: false,
+            description: "8 viagens lotadas",
+          },
+          {
+            type: "BEAT_RIVAL",
+            target_value: 3,
+            current_value: 0,
+            completed: false,
+            description: "Vence todos os rivais",
+          },
+        ],
+      },
+    ];
+
+    /* ═══════════════════════════════════════════════════════════
+       HELPERS
+       ═══════════════════════════════════════════════════════════ */
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return m + ":" + String(s).padStart(2, "0");
+    }
+
+    function starsHtml(n, small) {
+      let h = '<span class="stars" aria-label="' + n + ' de 3 estrelas">';
+      for (let i = 1; i <= 3; i++) {
+        h += '<span class="star' + (small ? " small" : "") + (i <= n ? " filled" : "") + '"></span>';
+      }
+      return h + "</span>";
+    }
+
+    function objIconClass(type) {
+      const map = {
+        PASSENGERS_DELIVERED: "passengers",
+        MONEY_EARNED: "money",
+        FULL_CAPACITY_TRIPS: "trips",
+        BEAT_RIVAL: "rival",
+        SPECIFIC_DESTINATION: "destination",
+        NO_COLLISIONS: "collisions",
+      };
+      return map[type] || "";
+    }
+
+    function shortObjLabel(obj) {
+      const meta = OBJ_META[obj.type];
+      const cur = Math.min(obj.current_value, obj.target_value);
+      switch (obj.type) {
+        case "PASSENGERS_DELIVERED":
+          return meta.icon + " " + cur + "/" + obj.target_value + " pass.";
+        case "MONEY_EARNED":
+          return meta.icon + " " + cur + "/" + obj.target_value + " Kz";
+        case "FULL_CAPACITY_TRIPS":
+          return meta.icon + " " + cur + "/" + obj.target_value + " lotados";
+        case "BEAT_RIVAL":
+          return obj.target_value <= 1
+            ? meta.icon + " vence o rival"
+            : meta.icon + " " + cur + "/" + obj.target_value + " rivais";
+        case "SPECIFIC_DESTINATION":
+          return meta.icon + " " + cur + "/" + obj.target_value + " dest.";
+        case "NO_COLLISIONS":
+          return meta.icon + " sem choques";
+        default:
+          return meta.icon + " " + cur + "/" + obj.target_value;
+      }
+    }
+
+    function levelStatus(level) {
+      if (!level.unlocked) return "locked";
+      if (level.stars > 0 || level.objectives.every((o) => o.completed)) return "completed";
+      return "unlocked";
+    }
+
+    function isChapterUnlocked(chapterName) {
+      return LEVELS.some((l) => l.chapter_name === chapterName && l.unlocked);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       LEVEL SELECT SCREEN
+       ═══════════════════════════════════════════════════════════ */
+    let activeChapter = "Cazenga";
+    let selectedLevel = LEVELS.find((l) => l.unlocked && levelStatus(l) !== "completed") || LEVELS[0];
+
+    function renderChapterTabs() {
+      const root = document.getElementById("chapter-tabs");
+      root.innerHTML = CHAPTERS.map((ch) => {
+        const locked = !isChapterUnlocked(ch.name);
+        const active = ch.name === activeChapter;
+        return (
+          '<button type="button" class="chapter-tab' +
+          (active ? " active" : "") +
+          (locked ? " locked" : "") +
+          '" data-chapter="' + ch.name + '"' +
+          (locked ? ' title="Capítulo bloqueado"' : "") +
+          ">" +
+          '<span class="ch-num">' + ch.num + "</span>" +
+          ch.name +
+          (locked ? ' <span class="lock-mini">🔒</span>' : "") +
+          "</button>"
+        );
+      }).join("");
+
+      root.querySelectorAll(".chapter-tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const name = btn.dataset.chapter;
+          if (!isChapterUnlocked(name)) return;
+          activeChapter = name;
+          const first = LEVELS.find((l) => l.chapter_name === name && l.unlocked) ||
+                        LEVELS.find((l) => l.chapter_name === name);
+          selectedLevel = first;
+          renderChapterTabs();
+          renderLevelsList();
+          renderLevelDetail();
+        });
+      });
+    }
+
+    function renderLevelsList() {
+      const root = document.getElementById("levels-list");
+      const levels = LEVELS.filter((l) => l.chapter_name === activeChapter);
+
+      root.innerHTML = levels.map((lv) => {
+        const status = levelStatus(lv);
+        const selected = selectedLevel && selectedLevel.level_number === lv.level_number;
+        const icons = lv.objectives
+          .map((o) => {
+            const m = OBJ_META[o.type];
+            return (
+              '<span class="obj-icon ' + objIconClass(o.type) + '" title="' + m.label + '">' +
+              m.icon +
+              "</span>"
+            );
+          })
+          .join("");
+
+        let statusPill = "";
+        if (status === "completed") statusPill = '<span class="status-pill done">CONCLUÍDA</span>';
+        else if (status === "unlocked") statusPill = '<span class="status-pill open">ABERTA</span>';
+        else statusPill = '<span class="status-pill lock">BLOQUEADA</span>';
+
+        return (
+          '<article class="level-card ui-card' +
+          (selected ? " selected" : "") +
+          (status === "locked" ? " locked" : "") +
+          (status === "completed" ? " completed" : "") +
+          '" data-level="' + lv.level_number + '" role="listitem" tabindex="0">' +
+          '<div class="level-num">' +
+          (status === "locked"
+            ? '<span class="lock-badge">🔒</span><span class="n" style="opacity:0.3">' + lv.level_number + "</span>"
+            : '<span class="n">' + lv.level_number + '</span><span class="lbl">NÍVEL</span>') +
+          "</div>" +
+          '<div class="level-info">' +
+          '<div class="name">' + (lv.bairro || lv.chapter_name) + "</div>" +
+          '<div class="meta">' +
+          starsHtml(lv.stars, true) +
+          statusPill +
+          (lv.rival_count > 0 ? '<span title="Rivais">🏁×' + lv.rival_count + "</span>" : "") +
+          "</div>" +
+          "</div>" +
+          '<div class="level-objectives-preview" title="Objectivos">' + icons + "</div>" +
+          "</article>"
+        );
+      }).join("");
+
+      root.querySelectorAll(".level-card").forEach((card) => {
+        const pick = () => {
+          const num = Number(card.dataset.level);
+          const lv = LEVELS.find((l) => l.level_number === num);
+          if (!lv) return;
+          selectedLevel = lv;
+          renderLevelsList();
+          renderLevelDetail();
+        };
+        card.addEventListener("click", pick);
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+        });
+      });
+    }
+
+    function renderLevelDetail() {
+      const root = document.getElementById("level-detail");
+      const lv = selectedLevel;
+      if (!lv) {
+        root.innerHTML = '<div class="detail-empty">Selecciona uma fase</div>';
+        return;
+      }
+      const status = levelStatus(lv);
+      const locked = status === "locked";
+
+      const objRows = lv.objectives
+        .map((o) => {
+          const m = OBJ_META[o.type];
+          return (
+            '<div class="detail-obj-row">' +
+            '<span class="obj-icon ' + objIconClass(o.type) + '">' + m.icon + "</span>" +
+            '<span class="desc">' + o.description + "</span>" +
+            '<span class="tgt">' + o.target_value + (o.type === "MONEY_EARNED" ? " Kz" : "") + "</span>" +
+            "</div>"
+          );
+        })
+        .join("");
+
+      root.innerHTML =
+        '<div class="detail-head">' +
+        '<div class="big-num">' + (locked ? "🔒" : lv.level_number) + "</div>" +
+        '<div class="detail-titles">' +
+        "<h2>" + (lv.bairro || lv.chapter_name) + "</h2>" +
+        '<div class="chapter">Cap. · ' + lv.chapter_name + "</div>" +
+        '<div class="detail-stars">' + starsHtml(lv.stars, false) + "</div>" +
+        "</div>" +
+        "</div>" +
+        '<div class="detail-stats">' +
+        '<div class="stat-chip"><div class="k">Tempo</div><div class="v' +
+        (lv.time_limit_seconds <= 90 ? " red" : "") + '">⏱ ' + formatTime(lv.time_limit_seconds) + "</div></div>" +
+        '<div class="stat-chip"><div class="k">Recompensa</div><div class="v gold">💰 ' + lv.reward_kz + " Kz</div></div>" +
+        '<div class="stat-chip"><div class="k">Rivais</div><div class="v">' +
+        (lv.rival_count === 0 ? "Nenhum" : "🏁 " + lv.rival_count) + "</div></div>" +
+        '<div class="stat-chip"><div class="k">Objectivos</div><div class="v">' + lv.objectives.length + "</div></div>" +
+        "</div>" +
+        '<div class="detail-objectives-title">OBJECTIVOS DA FASE</div>' +
+        '<div class="detail-obj-list">' + objRows + "</div>" +
+        '<button type="button" class="btn btn-primary play-btn" id="play-btn"' +
+        (locked ? " disabled" : "") + ">" +
+        (locked
+          ? "🔒 BLOQUEADA"
+          : '▶ JOGAR <span class="sub">Nv. ' + lv.level_number + "</span>") +
+        "</button>";
+
+      const play = document.getElementById("play-btn");
+      if (play && !locked) {
+        play.addEventListener("click", () => {
+          // Jump to HUD demo with this level's objectives
+          document.querySelector('.tab-btn[data-screen="hud"]').click();
+          // Clone objectives with fresh progress for demo feel
+          const demo = lv.objectives.map((o) => ({
+            ...o,
+            current_value: o.completed ? o.target_value : Math.min(o.current_value, o.target_value),
+            completed: o.completed,
+          }));
+          renderObjectivesHud(demo);
+          // Mark matching demo button
+          document.querySelectorAll(".hud-demo-controls button[data-demo]").forEach((b) => {
+            b.classList.toggle("active", String(b.dataset.demo) === String(lv.level_number));
+          });
+        });
+      }
+    }
+
+    function renderGlobalProgress() {
+      const done = LEVELS.filter((l) => levelStatus(l) === "completed").length;
+      const total = LEVELS.length;
+      document.getElementById("global-progress-label").textContent = done + "/" + total;
+      document.getElementById("global-progress-bar").style.width = Math.round((done / total) * 100) + "%";
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       OBJECTIVES HUD
+       ═══════════════════════════════════════════════════════════ */
+
+    /** @type {LevelObjective[]} */
+    let hudObjectives = [];
+
+    /**
+     * Renders up to 4 active objectives as progress pills.
+     * Layout auto-adapts via data-count on the track.
+     * @param {LevelObjective[]} objectives
+     */
+    function renderObjectivesHud(objectives) {
+      hudObjectives = objectives.slice(0, 4).map((o) => ({ ...o }));
+      const track = document.getElementById("objectives-track");
+      const count = hudObjectives.length;
+      track.dataset.count = String(count);
+
+      track.innerHTML = hudObjectives
+        .map((o, i) => {
+          const meta = OBJ_META[o.type];
+          const pct = Math.min(100, Math.round((o.current_value / Math.max(1, o.target_value)) * 100));
+          const done = o.completed || o.current_value >= o.target_value;
+          const label = shortObjLabel({ ...o, completed: done });
+
+          // Split icon from text for frac styling
+          const textHtml = label.replace(/(\d+\/\d+[^\s]*)/, '<span class="frac">$1</span>');
+
+          return (
+            '<div class="obj-pill' + (done ? " completed" : "") + '"' +
+            ' data-type="' + o.type + '"' +
+            ' data-index="' + i + '"' +
+            ' role="status"' +
+            ' aria-label="' + o.description + (done ? " — completo" : "") + '">' +
+            '<span class="obj-icon ' + objIconClass(o.type) + '" aria-hidden="true">' + meta.icon + "</span>" +
+            '<span class="obj-text">' + textHtml + "</span>" +
+            '<div class="obj-bar" aria-hidden="true"><i style="width:' + (done ? 100 : pct) + '%"></i></div>' +
+            "</div>"
+          );
+        })
+        .join("");
+    }
+
+    /** Mark the first incomplete objective as completed (demo). */
+    function completeNextObjective() {
+      const idx = hudObjectives.findIndex((o) => !o.completed && o.current_value < o.target_value);
+      if (idx < 0) return;
+      hudObjectives[idx].current_value = hudObjectives[idx].target_value;
+      hudObjectives[idx].completed = true;
+      renderObjectivesHud(hudObjectives);
+
+      // Trigger just-completed animation hook
+      requestAnimationFrame(() => {
+        const pill = document.querySelector('.obj-pill[data-index="' + idx + '"]');
+        if (pill) {
+          pill.classList.add("just-completed");
+          setTimeout(() => pill.classList.remove("just-completed"), 600);
+        }
+      });
+
+      // Update corner badge
+      const done = hudObjectives.filter((o) => o.completed).length;
+      const badge = document.querySelector(".hud-tl .hud-chip:nth-child(3) span span, .hud-tl .hud-chip:last-child");
+      // refresh OBJ badge number visually
+      const chips = document.querySelectorAll(".hud-tl .hud-chip");
+      if (chips[1]) {
+        chips[1].innerHTML =
+          '🎯 OBJ. <span style="background:#ffc31f;color:#0e1a33;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;margin-left:2px">' +
+          done +
+          "</span>";
+      }
+    }
+
+    /* Demo presets keyed by level number */
+    const DEMO_PRESETS = {
+      1: () => {
+        const lv = LEVELS.find((l) => l.level_number === 1);
+        return lv.objectives.map((o) => ({
+          ...o,
+          current_value: 1,
+          completed: false,
+        }));
+      },
+      5: () => {
+        const lv = LEVELS.find((l) => l.level_number === 5);
+        return lv.objectives.map((o) => ({ ...o }));
+      },
+      10: () => {
+        const lv = LEVELS.find((l) => l.level_number === 10);
+        return lv.objectives.map((o) => ({ ...o }));
+      },
+      18: () => {
+        const lv = LEVELS.find((l) => l.level_number === 18);
+        return lv.objectives.map((o) => ({ ...o }));
+      },
+    };
+
+    /* ═══════════════════════════════════════════════════════════
+       TAB SWITCHING + INIT
+       ═══════════════════════════════════════════════════════════ */
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        document.getElementById("screen-" + btn.dataset.screen).classList.add("active");
+      });
+    });
+
+    document.querySelectorAll(".hud-demo-controls button[data-demo]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.demo;
+        if (key === "complete") {
+          completeNextObjective();
+          return;
+        }
+        document.querySelectorAll(".hud-demo-controls button[data-demo]").forEach((b) => {
+          if (b.dataset.demo !== "complete") b.classList.remove("active");
+        });
+        btn.classList.add("active");
+        const preset = DEMO_PRESETS[key];
+        if (preset) renderObjectivesHud(preset());
+      });
+    });
+
+    // Boot
+    renderChapterTabs();
+    renderLevelsList();
+    renderLevelDetail();
+    renderGlobalProgress();
+    renderObjectivesHud(DEMO_PRESETS[1]());
+
+    // Expose for console tinkering
+    window.LotadorUI = {
+      LEVELS,
+      CHAPTERS,
+      renderObjectivesHud,
+      completeNextObjective,
+      selectLevel(n) {
+        selectedLevel = LEVELS.find((l) => l.level_number === n) || selectedLevel;
+        activeChapter = selectedLevel.chapter_name;
+        renderChapterTabs();
+        renderLevelsList();
+        renderLevelDetail();
+      },
+    };
+  </script>
+</body>
+</html>

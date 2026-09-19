@@ -32,17 +32,9 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Progressão já foi aplicada pelo LevelManager.commit no endMatch.
-    // Aqui só tratamos o caso legado (modo livre) se ainda não creditou XP de nível.
-    if (!this.levelResult && this.stats.promoted) {
-      const save = SaveManager.load();
-      SaveManager.update({
-        level: save.level + 1,
-        xp: save.xp + this.stats.xp + 100,
-        money: save.money + 750,
-      });
-    }
-
+    // Progressão de campanha já foi aplicada por LevelManager.commit no endMatch.
+    // Modo livre: GameScene.endMatch já creditou money/xp da partida —
+    // NÃO voltar a somar bónus aqui (evita double-count).
     this.layer = this.add.container(0, 0);
     this.render(layoutOf(this), true);
     relayoutOnResize(this, (l) => this.render(l, false));
