@@ -12,7 +12,9 @@ import { LevelSelectScene } from "./scenes/LevelSelectScene";
 /** Cria a instância Phaser dentro do contentor indicado (apenas no browser). */
 export function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
-    type: Phaser.AUTO,
+    // O jogo usa apenas sprites e gráficos 2D; Canvas evita framebuffers WebGL
+    // incompletos em previews/iframes onde o viewport pode iniciar em 0px.
+    type: Phaser.CANVAS,
     parent,
     // O contentor é full-bleed; RESIZE evita letterbox em qualquer proporção.
     width: GAME_CONFIG.width,

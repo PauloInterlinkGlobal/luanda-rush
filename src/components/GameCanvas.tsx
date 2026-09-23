@@ -30,7 +30,9 @@ export default function GameCanvas() {
     const refresh = () => {
       const scale = gameRef.current?.scale;
       if (!scale) return;
-      scale.resize(el.clientWidth || window.innerWidth, el.clientHeight || window.innerHeight);
+      const width = Math.max(1, Math.round(el.clientWidth || window.innerWidth));
+      const height = Math.max(1, Math.round(el.clientHeight || window.innerHeight));
+      scale.resize(width, height);
       scale.refresh();
     };
     const schedule = () => window.requestAnimationFrame(refresh);
