@@ -96,6 +96,8 @@ export class MenuScene extends Phaser.Scene {
     primary = false,
     x?: number,
     maxH?: number,
+    icon = "",
+    notification = false,
   ): number {
     const l = this.L;
     const w = Math.min(primary ? l.s(320) : l.s(280), l.innerWidth * 0.9);
@@ -106,13 +108,26 @@ export class MenuScene extends Phaser.Scene {
       .setStrokeStyle(3, 0x0e1a33)
       .setInteractive({ useHandCursor: true });
     const text = this.add
-      .text(cx, y, label, {
+      .text(cx + (icon ? l.s(10) : 0), y, label, {
         fontFamily: FONT.display,
         // A fonte acompanha a altura efectiva do botão — nunca transborda.
         fontSize: `${Math.max(11, Math.round(Math.min(primary ? 28 : 20, (h / l.uiScale) * 0.46) * l.uiScale))}px`,
         color: primary ? "#0e1a33" : HEX.white,
       })
       .setOrigin(0.5);
+    const iconText = icon
+      ? this.add.text(cx - w / 2 + l.s(22), y, icon, {
+          fontFamily: FONT.body,
+          fontSize: l.font(primary ? 22 : 18),
+          color: primary ? "#0e1a33" : HEX.white,
+        }).setOrigin(0.5)
+      : null;
+    const badge = notification
+      ? this.add.circle(cx + w / 2 - l.s(12), y - h / 2 + l.s(9), l.s(9), 0xffc94f).setStrokeStyle(1, 0x0e1a33)
+      : null;
+    const badgeText = notification
+      ? this.add.text(cx + w / 2 - l.s(12), y - h / 2 + l.s(9), "!", { fontFamily: FONT.display, fontSize: l.font(11), color: "#0e1a33" }).setOrigin(0.5)
+      : null;
     bg.on("pointerover", () => bg.setScale(1.04));
     bg.on("pointerout", () => bg.setScale(1));
     bg.on("pointerdown", () => {
@@ -121,6 +136,9 @@ export class MenuScene extends Phaser.Scene {
       onClick();
     });
     this.layer.add([bg, text]);
+    if (iconText) this.layer.add(iconText);
+    if (badge) this.layer.add(badge);
+    if (badgeText) this.layer.add(badgeText);
     return h;
   }
 
@@ -292,25 +310,30 @@ export class MenuScene extends Phaser.Scene {
     const sideGuide = l.innerWidth >= l.s(880) && l.innerHeight >= l.s(420);
     const compactGuide = !sideGuide;
 
+    const totalStars = Object.values(save.levelStars ?? {}).reduce((sum, stars) => sum + stars, 0);
     this.label(
       l.cx,
       l.top + l.s(104),
-      `NÍVEL ${save.level} · ${levelTitle(save.level)} · ${save.money} Kz · RECORDE ${save.bestScore} Kz`,
-      15,
+      `★ NÍVEL ${save.level}    ▣ ${levelTitle(save.level)}    FASE ${save.unlockedLevel}    ◉ ${save.money} Kz    ★ ${totalStars} Estrelas`,
+      14,
       HEX.gold,
     );
 
-    const entries: { label: string; action: () => void; primary?: boolean }[] = [
+    const entries: { label: string; action: () => void; primary?: boolean; icon: string; notification?: boolean }[] = [
       {
         label: save.tutorialDone ? "JOGAR" : "TUTORIAL",
         primary: true,
+        icon: "▶",
+        notification: !save.tutorialDone,
         action: () => {
           this.registry.set("tutorial", !save.tutorialDone);
           this.scene.start("Game");
         },
       },
       {
-        label: save.tutorialDone ? "REPETIR TUTORIAL" : "MISSÕES",
+        label: save.tutorialDone ? "CONTINUAR" : "MISSÕES",
+        icon: save.tutorialDone ? "▷" : "✓",
+        notification: !save.tutorialDone,
         action: () => {
           if (save.tutorialDone) {
             this.registry.set("tutorial", true);
@@ -318,10 +341,10 @@ export class MenuScene extends Phaser.Scene {
           } else this.go("MISSOES");
         },
       },
-      { label: "GESTÃO", action: () => this.go("GESTAO") },
-      { label: "PERSONAGEM", action: () => this.scene.start("Character") },
-      { label: "DEFINIÇÕES", action: () => this.go("DEFINICOES") },
-      { label: "SAIR DO JOGO", action: () => this.go("SAIDA") },
+      { label: "UPGRADES", icon: "↑", notification: true, action: () => this.go("GESTAO") },
+      { label: "PERSONAGEM", icon: "●", action: () => this.scene.start("Character") },
+      { label: "DEFINIÇÕES", icon: "⚙", action: () => this.go("DEFINICOES") },
+      { label: "SAIR DO JOGO", icon: "↪", action: () => this.go("SAIDA") },
     ];
 
     const guideHeight = compactGuide ? l.s(70) : 0;
@@ -342,6 +365,8 @@ export class MenuScene extends Phaser.Scene {
         entry.primary,
         columnX,
         maxButtonH,
+        entry.icon,
+        entry.notification,
       );
     });
 
