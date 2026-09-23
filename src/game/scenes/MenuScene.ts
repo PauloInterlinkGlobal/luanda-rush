@@ -56,6 +56,11 @@ export class MenuScene extends Phaser.Scene {
       this.backdrop.add(bg);
     }
 
+    const titleGlow = this.add
+      .rectangle(l.cx, l.top + l.s(58), l.s(430), l.s(118), 0x16305c, 0.3)
+      .setStrokeStyle(1, 0x4b6b9d, 0.35);
+    this.backdrop.add(titleGlow);
+
     const title = this.add
       .text(l.cx, l.top + l.s(30), "LOTADOR", {
         fontFamily: FONT.display,
@@ -105,17 +110,33 @@ export class MenuScene extends Phaser.Scene {
     primary = false,
     x?: number,
     maxH?: number,
+    icon?: string,
   ): number {
     const l = this.L;
     const w = Math.min(primary ? l.s(320) : l.s(280), l.innerWidth * 0.9);
     const h = Math.min(maxH ?? Number.POSITIVE_INFINITY, Math.max(28, primary ? l.s(56) : l.s(46)));
     const cx = x ?? l.cx;
+    const shadow = this.add
+      .rectangle(cx, y + l.s(4), w + l.s(4), h + l.s(4), 0x070c18, 0.62)
+      .setOrigin(0.5);
     const bg = this.add
-      .rectangle(cx, y, w, h, primary ? 0xffc31f : 0x16305c, 0.96)
-      .setStrokeStyle(3, 0x0e1a33)
+      .rectangle(cx, y, w, h, primary ? 0xffc31f : 0x213e73, 0.98)
+      .setStrokeStyle(primary ? 2 : 2, primary ? 0xffe28a : 0x6c8fca)
       .setInteractive({ useHandCursor: true });
+    const highlight = this.add
+      .rectangle(cx, y - h * 0.26, w - l.s(8), Math.max(2, h * 0.18), primary ? 0xfff0a8 : 0x41669e, 0.42)
+      .setOrigin(0.5);
+    const iconText = icon
+      ? this.add
+          .text(cx - w / 2 + l.s(28), y, icon, {
+            fontFamily: FONT.body,
+            fontSize: `${Math.max(14, Math.round(h * 0.42))}px`,
+            color: primary ? "#3b2a08" : HEX.white,
+          })
+          .setOrigin(0.5)
+      : undefined;
     const text = this.add
-      .text(cx, y, label, {
+      .text(cx + (icon ? l.s(10) : 0), y, label, {
         fontFamily: FONT.display,
         // A fonte acompanha a altura efectiva do botão — nunca transborda.
         fontSize: `${Math.max(11, Math.round(Math.min(primary ? 28 : 20, (h / l.uiScale) * 0.46) * l.uiScale))}px`,
@@ -129,7 +150,7 @@ export class MenuScene extends Phaser.Scene {
       audio.ui();
       onClick();
     });
-    this.layer.add([bg, text]);
+    this.layer.add([shadow, bg, highlight, ...(iconText ? [iconText] : []), text]);
     return h;
   }
 
@@ -324,9 +345,10 @@ export class MenuScene extends Phaser.Scene {
       HEX.gold,
     );
 
-    const entries: { label: string; action: () => void; primary?: boolean }[] = [
+    const entries: { label: string; action: () => void; primary?: boolean; icon: string }[] = [
       {
         label: save.tutorialDone || unlocked > 1 ? "JOGAR · FASES" : "TUTORIAL · FASE 1",
+        icon: "▶",
         primary: true,
         action: () => {
           if (!save.tutorialDone && unlocked <= 1) {
@@ -340,6 +362,7 @@ export class MenuScene extends Phaser.Scene {
       },
       {
         label: "CONTINUAR",
+        icon: "▶",
         action: () => {
           const phase = Math.min(unlocked, 20);
           this.registry.set("phase", phase);
@@ -347,15 +370,29 @@ export class MenuScene extends Phaser.Scene {
           this.scene.start("Game");
         },
       },
-      { label: "UPGRADES", action: () => this.go("GESTAO") },
-      { label: "MISSÕES", action: () => this.go("MISSOES") },
-      { label: "PERSONAGEM", action: () => this.scene.start("Character") },
-      { label: "DEFINIÇÕES", action: () => this.go("DEFINICOES") },
-      { label: "SAIR DO JOGO", action: () => this.go("SAIDA") },
+      { label: "UPGRADES", icon: "↟", action: () => this.go("GESTAO") },
+      { label: "MISSÕES", icon: "✓", action: () => this.go("MISSOES") },
+      { label: "PERSONAGEM", icon: "●", action: () => this.scene.start("Character") },
+      { label: "DEFINIÇÕES", icon: "⚙", action: () => this.go("DEFINICOES") },
+      { label: "SAIR DO JOGO", icon: "↪", action: () => this.go("SAIDA") },
     ];
 
     const guideHeight = compactGuide ? l.s(70) : 0;
     const footerHeight = l.s(26);
+    const menuPanelWidth = Math.min(l.s(470), l.innerWidth * 0.74);
+    const menuPanelTop = l.top + l.s(112);
+    const menuPanelBottom = l.bottom - footerHeight - guideHeight - l.s(4);
+    const menuPanel = this.add
+      .rectangle(
+        sideGuide ? l.cx - l.s(80) : l.cx,
+        (menuPanelTop + menuPanelBottom) / 2,
+        menuPanelWidth,
+        Math.max(l.s(180), menuPanelBottom - menuPanelTop),
+        0x0b1429,
+        0.5,
+      )
+      .setStrokeStyle(1, 0x6a82ae, 0.45);
+    this.layer.add(menuPanel);
     const listTop = l.top + l.s(126);
     const listBottom = l.bottom - footerHeight - guideHeight - l.s(10);
     const available = Math.max(l.s(120), listBottom - listTop);
@@ -372,6 +409,7 @@ export class MenuScene extends Phaser.Scene {
         entry.primary,
         columnX,
         maxButtonH,
+        entry.icon,
       );
     });
 
