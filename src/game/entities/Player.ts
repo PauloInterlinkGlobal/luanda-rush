@@ -2,11 +2,11 @@ import Phaser from "phaser";
 import { Character } from "./Character";
 import { BALANCE } from "../config/BalanceConfig";
 import type { SaveData } from "../types";
-import { ProgressionManager } from "../systems/ProgressionManager";
+import { UPGRADES } from "../data/missions";
 
 /**
  * Jogador — movimento, corrida, stamina e power-ups.
- * Os upgrades guardados aplicam-se aqui via ProgressionManager.
+ * Os upgrades guardados aplicam-se aqui.
  */
 export class Player extends Character {
   stamina: number = BALANCE.maxStamina;
@@ -18,7 +18,6 @@ export class Player extends Character {
 
   private walkSpeed: number = BALANCE.playerWalkSpeed;
   private runSpeed: number = BALANCE.playerRunSpeed;
-  private staminaRegen: number = BALANCE.staminaRegenPerSecond;
   private regenDelay = 0;
   private stepTimer = 0;
 
@@ -33,14 +32,18 @@ export class Player extends Character {
   }
 
   applyUpgrades(save: SaveData): void {
-    const b = ProgressionManager.playerBonuses(save);
-    this.walkSpeed = b.walkSpeed;
-    this.runSpeed = b.runSpeed;
-    this.maxStamina = b.maxStamina;
+    const lvl = (id: string): number => {
+      const def = UPGRADES.find((u) => u.id === id);
+      const level = save.upgrades[id as keyof SaveData["upgrades"]] ?? 0;
+      return def ? 1 + def.perLevel * level : 1;
+    };
+    const speedMul = lvl("velocidade");
+    this.walkSpeed = BALANCE.playerWalkSpeed * speedMul;
+    this.runSpeed = BALANCE.playerRunSpeed * speedMul;
+    this.maxStamina = BALANCE.maxStamina * lvl("resistencia");
     this.stamina = this.maxStamina;
-    this.staminaRegen = b.staminaRegen;
-    this.callRangeBonus = b.callRange;
-    this.convinceBonus = b.convince;
+    this.callRangeBonus = lvl("voz");
+    this.convinceBonus = lvl("persuasao");
   }
 
   get callRadius(): number {
@@ -93,7 +96,10 @@ export class Player extends Character {
     } else {
       this.regenDelay = Math.max(0, this.regenDelay - dt);
       if (this.regenDelay <= 0) {
-        this.stamina = Math.min(this.maxStamina, this.stamina + this.staminaRegen * dt);
+        this.stamina = Math.min(
+          this.maxStamina,
+          this.stamina + BALANCE.staminaRegenPerSecond * dt,
+        );
       }
       if (this.stamina > this.maxStamina * 0.3) this.tired = false;
     }

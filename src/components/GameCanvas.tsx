@@ -24,32 +24,8 @@ export default function GameCanvas() {
       .catch((error: unknown) => {
         console.error("[v0] Falha ao iniciar o jogo:", error);
       });
-    // O canvas deve seguir SEMPRE o tamanho útil real: barras móveis do
-    // browser, teclado, rotação e mudanças de safe area disparam um refresh
-    // da escala do Phaser — sem recarregar a página.
-    const refresh = () => {
-      const scale = gameRef.current?.scale;
-      if (!scale) return;
-      const width = Math.max(1, Math.round(el.clientWidth || window.innerWidth));
-      const height = Math.max(1, Math.round(el.clientHeight || window.innerHeight));
-      scale.resize(width, height);
-      scale.refresh();
-    };
-    const schedule = () => window.requestAnimationFrame(refresh);
-    window.addEventListener("resize", schedule);
-    window.addEventListener("orientationchange", schedule);
-    window.visualViewport?.addEventListener("resize", schedule);
-    window.visualViewport?.addEventListener("scroll", schedule);
-    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(schedule) : null;
-    observer?.observe(el);
-
     return () => {
       cancelled = true;
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("orientationchange", schedule);
-      window.visualViewport?.removeEventListener("resize", schedule);
-      window.visualViewport?.removeEventListener("scroll", schedule);
-      observer?.disconnect();
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };

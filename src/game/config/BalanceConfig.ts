@@ -72,14 +72,14 @@ export const BALANCE = {
 } as const;
 
 export const LEVEL_TITLES: { level: number; title: string }[] = [
-  { level: 1, title: "Aprendiz" },
+  { level: 1, title: "Novato" },
   { level: 5, title: "Lotador" },
-  { level: 10, title: "Lotador Experiente" },
-  { level: 15, title: "Lotador Profissional" },
-  { level: 20, title: "Mestre da Paragem" },
-  { level: 30, title: "Elite" },
-  { level: 40, title: "Lenda" },
-  { level: 50, title: "Rei da Paragem" },
+  { level: 10, title: "Experiente" },
+  { level: 15, title: "Profissional" },
+  { level: 20, title: "Veterano" },
+  { level: 30, title: "Mestre" },
+  { level: 40, title: "Elite" },
+  { level: 50, title: "Lenda" },
 ];
 
 /** Perfis de dificuldade dinâmica. */

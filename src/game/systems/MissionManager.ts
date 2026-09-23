@@ -1,6 +1,5 @@
 import { MISSIONS } from "../data/missions";
-import type { MatchStats, MissionDefinition, ObjectiveMetric } from "../types";
-import { ObjectiveManager } from "./ObjectiveManager";
+import type { MatchStats, MissionDefinition } from "../types";
 
 export interface MissionProgress {
   def: MissionDefinition;
@@ -8,10 +7,7 @@ export interface MissionProgress {
   done: boolean;
 }
 
-/**
- * Avalia as missões da partida em tempo real.
- * Reutiliza ObjectiveManager.readMetric para métricas partilhadas com fases.
- */
+/** Avalia as missões da partida em tempo real. */
 export class MissionManager {
   progress: MissionProgress[] = [];
   onComplete?: (m: MissionDefinition) => void;
@@ -28,11 +24,30 @@ export class MissionManager {
   evaluate(stats: MatchStats, combo: number): void {
     for (const p of this.progress) {
       if (p.done) continue;
-      const metric = p.def.metric as ObjectiveMetric;
-      p.current = ObjectiveManager.readMetric(metric, stats, combo);
-      // combo: manter o máximo
-      if (metric === "combo") {
-        p.current = Math.max(p.current, combo);
+      switch (p.def.metric) {
+        case "taxisFilled":
+          p.current = stats.taxisFilled;
+          break;
+        case "passengers":
+          p.current = stats.passengers;
+          break;
+        case "money":
+          p.current = stats.money;
+          break;
+        case "fastFill":
+          p.current = stats.fastFill;
+          break;
+        case "callsUsed":
+          p.current = stats.callsUsed;
+          break;
+        case "runsUsed":
+          p.current = stats.runsUsed;
+          break;
+        case "combo":
+          p.current = Math.max(p.current, combo);
+          break;
+        default:
+          break;
       }
       if (p.current >= p.def.goal) {
         p.done = true;

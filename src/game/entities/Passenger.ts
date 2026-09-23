@@ -19,8 +19,6 @@ export class Passenger extends Character {
   value: number;
   /** Tutorial: nunca perde a paciência nem desiste sozinho. */
   frozenPatience = false;
-  /** Evita contar a mesma desistência várias vezes no loop. */
-  lossCounted = false;
 
   /** Quem reclamou este passageiro (jogador ou NPC). */
   claimedBy: Phaser.GameObjects.GameObject | null = null;
@@ -83,11 +81,6 @@ export class Passenger extends Character {
     );
   }
 
-  /** 0..1 progresso de convencer (para barra de feedback no HUD/mundo). */
-  get convinceRatio(): number {
-    return Phaser.Math.Clamp(this.convinceProgress / Math.max(1, this.def.convinceTime), 0, 1);
-  }
-
   /** Um lotador tenta convencer. Devolve true quando o passageiro aceita. */
   tryConvince(by: Phaser.GameObjects.GameObject, deltaMs: number, persuasion: number): boolean {
     if (this.claimedBy && this.claimedBy !== by) return false;
@@ -130,7 +123,6 @@ export class Passenger extends Character {
     this.state = PassengerState.LEAVING;
     this.claimedBy = null;
     this.bubble.setVisible(false);
-    // lossCounted é marcado pela GameScene ao processar a perda
   }
 
   tick(delta: number, leader: Phaser.Math.Vector2 | null): void {

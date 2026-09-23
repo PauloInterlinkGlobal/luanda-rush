@@ -3,8 +3,8 @@ import { BALANCE, LEVEL_TITLES } from "../config/BalanceConfig";
 import type { SaveData } from "../types";
 import { loadGameState, saveGameState } from "../../lib/storage/gameDB";
 
-const KEY = "lotador.save.v2";
-const VERSION = 2;
+const KEY = "lotador.save.v1";
+const VERSION = 1;
 
 function defaults(): SaveData {
   return {
@@ -12,15 +12,7 @@ function defaults(): SaveData {
     level: 1,
     xp: 0,
     money: BALANCE.startingMoney,
-    upgrades: {
-      velocidade: 0,
-      energia: 0,
-      recuperacao: 0,
-      agilidade: 0,
-      resistencia: 0,
-      voz: 0,
-      persuasao: 0,
-    },
+    upgrades: { velocidade: 0, resistencia: 0, voz: 0, persuasao: 0 },
     character: { ...DEFAULT_CHARACTER },
     playerName: "Lotador",
     missions: {},
@@ -29,11 +21,6 @@ function defaults(): SaveData {
     fleetLevel: 1,
     stationLevel: 1,
     unlockedMaps: ["bairro"],
-    unlockedPhase: 1,
-    phases: {},
-    reputation: 0,
-    currentArea: "bairro",
-    unlockedAreas: ["bairro"],
     settings: {
       music: true,
       sfx: true,
@@ -42,53 +29,6 @@ function defaults(): SaveData {
       language: "pt",
     },
   };
-}
-
-/** Migra saves antigos (v1) para o formato de campanha por fases. */
-function migrate(raw: Partial<SaveData>): SaveData {
-  const base = defaults();
-  const merged: SaveData = {
-    ...base,
-    ...raw,
-    upgrades: { ...base.upgrades, ...(raw.upgrades ?? {}) },
-    character: { ...base.character, ...(raw.character ?? {}) },
-    missions: { ...base.missions, ...(raw.missions ?? {}) },
-    settings: { ...base.settings, ...(raw.settings ?? {}) },
-    phases: { ...(raw.phases ?? {}) },
-    unlockedMaps: raw.unlockedMaps?.length ? raw.unlockedMaps : base.unlockedMaps,
-    unlockedAreas: raw.unlockedAreas?.length
-      ? raw.unlockedAreas
-      : raw.unlockedMaps?.length
-        ? [...raw.unlockedMaps]
-        : base.unlockedAreas,
-    version: VERSION,
-  };
-
-  // Se o jogador já fez o tutorial no save antigo, desbloqueia fase 2.
-  if (raw.tutorialDone && (merged.unlockedPhase ?? 1) < 2) {
-    merged.unlockedPhase = 2;
-    const prevPhase1 = merged.phases["1"];
-    merged.phases = {
-      ...merged.phases,
-      "1": prevPhase1 ?? {
-        completed: true,
-        stars: 1,
-        bestTime: 0,
-        attempts: 1,
-        bestMoney: 0,
-      },
-    };
-  }
-
-  // Garante unlockedPhase mínimo
-  if (!merged.unlockedPhase || merged.unlockedPhase < 1) merged.unlockedPhase = 1;
-
-  // Migra upgrades legados → novos nomes
-  const res = merged.upgrades["resistencia"] ?? 0;
-  const ene = merged.upgrades["energia"] ?? 0;
-  if (res > ene) merged.upgrades["energia"] = res;
-
-  return merged;
 }
 
 /** Persistência local versionada. Nunca lança — falha para os valores padrão. */
@@ -100,15 +40,21 @@ export class SaveManager {
     const base = defaults();
     try {
       if (typeof window === "undefined") return base;
-      // Tenta v2, depois v1
-      let raw = window.localStorage.getItem(KEY);
-      if (!raw) raw = window.localStorage.getItem("lotador.save.v1");
+      const raw = window.localStorage.getItem(KEY);
       if (!raw) {
         this.cache = base;
         return base;
       }
       const parsed = JSON.parse(raw) as Partial<SaveData>;
-      const merged = migrate(parsed);
+      const merged: SaveData = {
+        ...base,
+        ...parsed,
+        upgrades: { ...base.upgrades, ...(parsed.upgrades ?? {}) },
+        character: { ...base.character, ...(parsed.character ?? {}) },
+        missions: { ...base.missions, ...(parsed.missions ?? {}) },
+        settings: { ...base.settings, ...(parsed.settings ?? {}) },
+        version: VERSION,
+      };
       this.cache = merged;
       return merged;
     } catch (err) {
@@ -122,11 +68,7 @@ export class SaveManager {
     this.cache = data;
     void saveGameState(data as unknown as Record<string, unknown>);
     try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(KEY, JSON.stringify(data));
-        // Mantém v1 sincronizado para não perder progresso se algo ler a chave antiga
-        window.localStorage.setItem("lotador.save.v1", JSON.stringify(data));
-      }
+      if (typeof window !== "undefined") window.localStorage.setItem(KEY, JSON.stringify(data));
     } catch (err) {
       console.warn("[SaveManager] não foi possível guardar", err);
     }
@@ -135,7 +77,7 @@ export class SaveManager {
   static async hydrate(): Promise<SaveData> {
     const stored = await loadGameState();
     if (!stored) return this.load();
-    const next = migrate({ ...this.load(), ...(stored as Partial<SaveData>) });
+    const next = { ...this.load(), ...(stored as Partial<SaveData>) };
     this.cache = next;
     return next;
   }
@@ -156,7 +98,7 @@ export class SaveManager {
 /** XP necessário para atingir um nível. */
 export function xpForLevel(level: number): number {
   return Math.round(
-    (BALANCE.xpPerLevelBase * (Math.pow(BALANCE.xpPerLevelGrowth, level - 1) - 1)) /
+    BALANCE.xpPerLevelBase * (Math.pow(BALANCE.xpPerLevelGrowth, level - 1) - 1) /
       (BALANCE.xpPerLevelGrowth - 1),
   );
 }

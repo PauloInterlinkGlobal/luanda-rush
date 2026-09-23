@@ -118,17 +118,6 @@ export class AudioManager {
   lost(): void {
     this.blip(320, 0.25, "sawtooth", 0.14, 120);
   }
-  /** Colisão / embate leve. */
-  bump(): void {
-    this.noise(0.12, 0.12, 600);
-    this.blip(180, 0.1, "sawtooth", 0.1, 80);
-  }
-  /** Objectivo de fase concluído — distinto de +Kz. */
-  objectiveComplete(): void {
-    [523, 659, 784, 988, 1174].forEach((f, i) =>
-      window.setTimeout(() => this.blip(f, 0.14, "triangle", 0.14), i * 55),
-    );
-  }
   powerUp(): void {
     this.blip(300, 0.35, "sawtooth", 0.16, 1200);
   }

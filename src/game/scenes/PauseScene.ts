@@ -1,50 +1,36 @@
 import Phaser from "phaser";
-import { FONT, HEX } from "../config/GameConfig";
+import { HEX } from "../config/GameConfig";
 import { SaveManager } from "../systems/SaveManager";
 import { audio } from "../systems/AudioManager";
-import { layoutOf, relayoutOnResize, type Layout } from "../systems/Responsive";
 
-/** Painel de pausa por cima da partida: continuar, definições rápidas, sair.
- *  Layout proporcional ao espaço disponível — nunca corta nem sobrepõe. */
+/** Painel de pausa por cima da partida: continuar, definições rápidas, sair. */
 export class PauseScene extends Phaser.Scene {
   private layer!: Phaser.GameObjects.Container;
-  private shade!: Phaser.GameObjects.Rectangle;
   private confirming = false;
-  private L!: Layout;
 
   constructor() {
     super("Pause");
   }
 
   create(): void {
-    const l = (this.L = layoutOf(this));
-    this.shade = this.add
-      .rectangle(0, 0, l.width, l.height, 0x0e1a33, 0.88)
-      .setOrigin(0)
-      .setInteractive();
+    const { width, height } = this.scale;
+    this.add.rectangle(0, 0, width, height, 0x0e1a33, 0.88).setOrigin(0).setInteractive();
     this.layer = this.add.container(0, 0);
     this.confirming = false;
     this.render();
     this.input.keyboard?.on("keydown-ESC", () => this.resume());
-    relayoutOnResize(this, (next) => {
-      this.L = next;
-      this.shade.setSize(next.width, next.height);
-      this.render();
-    });
   }
 
   private button(y: number, label: string, onClick: () => void, primary = false): void {
-    const l = this.L;
-    const w = Math.min(primary ? l.s(320) : l.s(280), l.innerWidth * 0.9);
-    const h = Math.max(38, primary ? l.s(54) : l.s(44));
+    const { width } = this.scale;
     const bg = this.add
-      .rectangle(l.cx, y, w, h, primary ? 0xffc31f : 0x16305c, 0.96)
+      .rectangle(width / 2, y, primary ? 320 : 280, primary ? 58 : 46, primary ? 0xffc31f : 0x16305c, 0.96)
       .setStrokeStyle(3, 0x0e1a33)
       .setInteractive({ useHandCursor: true });
     const t = this.add
-      .text(l.cx, y, label, {
-        fontFamily: FONT.display,
-        fontSize: l.font(primary ? 26 : 19),
+      .text(width / 2, y, label, {
+        fontFamily: "Impact, 'Arial Black', sans-serif",
+        fontSize: primary ? "28px" : "20px",
         color: primary ? "#0e1a33" : HEX.white,
       })
       .setOrigin(0.5);
@@ -60,51 +46,48 @@ export class PauseScene extends Phaser.Scene {
   private title(y: number, value: string, size: number, color: string): void {
     this.layer.add(
       this.add
-        .text(this.L.cx, y, value, { fontFamily: FONT.display, fontSize: this.L.font(size), color })
+        .text(this.scale.width / 2, y, value, {
+          fontFamily: "Impact, 'Arial Black', sans-serif",
+          fontSize: `${size}px`,
+          color,
+        })
         .setOrigin(0.5),
     );
   }
 
   private render(): void {
     this.layer.removeAll(true);
-    const l = this.L;
+    const { height } = this.scale;
     const s = SaveManager.load().settings;
 
     if (this.confirming) {
-      this.title(l.y(0.1), "SAIR DA PARTIDA?", 36, HEX.yellow);
-      this.title(l.y(0.26), "Perdes o progresso desta corrida.", 16, HEX.muted);
-      this.button(l.y(0.52), "SIM, SAIR", () => this.quit());
-      this.button(l.y(0.74), "CONTINUAR A JOGAR", () => {
+      this.title(150, "SAIR DA PARTIDA?", 40, HEX.yellow);
+      this.title(210, "Perdes o progresso desta corrida.", 18, HEX.muted);
+      this.button(300, "SIM, SAIR", () => this.quit());
+      this.button(364, "CONTINUAR A JOGAR", () => {
         this.confirming = false;
         this.render();
       });
       return;
     }
 
-    this.title(l.y(0.06), "PAUSA", 40, HEX.yellow);
-    this.button(l.y(0.24), "CONTINUAR", () => this.resume(), true);
-    this.button(l.y(0.4), `MÚSICA: ${s.music ? "LIGADA" : "DESLIGADA"}`, () => {
-      const cur = SaveManager.load().settings;
-      SaveManager.update({ settings: { ...cur, music: !cur.music } });
-      audio.musicEnabled = !cur.music;
+    this.title(120, "PAUSA", 56, HEX.yellow);
+    this.button(210, "CONTINUAR", () => this.resume(), true);
+    this.button(286, `MÚSICA: ${s.music ? "LIGADA" : "DESLIGADA"}`, () => {
+      SaveManager.update({ settings: { ...s, music: !s.music } });
+      audio.musicEnabled = !s.music;
       this.render();
     });
-    this.button(l.y(0.54), `EFEITOS: ${s.sfx ? "LIGADOS" : "DESLIGADOS"}`, () => {
-      const cur = SaveManager.load().settings;
-      SaveManager.update({ settings: { ...cur, sfx: !cur.sfx } });
-      audio.sfxEnabled = !cur.sfx;
+    this.button(344, `EFEITOS: ${s.sfx ? "LIGADOS" : "DESLIGADOS"}`, () => {
+      SaveManager.update({ settings: { ...s, sfx: !s.sfx } });
+      audio.sfxEnabled = !s.sfx;
       this.render();
     });
-    this.button(l.y(0.68), `VIBRAÇÃO: ${s.vibration ? "LIGADA" : "DESLIGADA"}`, () => {
-      const cur = SaveManager.load().settings;
-      SaveManager.update({ settings: { ...cur, vibration: !cur.vibration } });
-      this.render();
-    });
-    this.button(l.y(0.84), "SAIR DA PARTIDA", () => {
+    this.button(402, "SAIR DA PARTIDA", () => {
       this.confirming = true;
       this.render();
     });
-    this.title(l.bottom - l.s(6), "ESC para continuar", 13, HEX.muted);
+    this.title(height - 34, "ESC para continuar", 14, HEX.muted);
   }
 
   private resume(): void {
@@ -113,12 +96,9 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private quit(): void {
-    const game = this.scene.get("Game") as { levelMgr?: { phaseId: number } | null };
-    const hadPhase = !!game?.levelMgr;
     this.scene.stop("HUD");
     this.scene.stop("Game");
     this.scene.stop();
-    // Volta ao mapa de fases se estava numa fase de campanha
-    this.scene.start(hadPhase ? "LevelSelect" : "Menu");
+    this.scene.start("Menu");
   }
 }

@@ -6,19 +6,16 @@ import {
   TutorialStep,
   type TutorialHudTarget,
 } from "../systems/TutorialController";
-import { layoutOf, restartOnResize, type Layout } from "../systems/Responsive";
 import type { GameScene } from "./GameScene";
 
-type HudTargetPos = {
-  [K in Exclude<TutorialHudTarget, null>]: { x: number; y: number; r: number };
-};
+const HUD_MARGIN = 16;
+
+type HudTargetPos = { [K in Exclude<TutorialHudTarget, null>]: { x: number; y: number; r: number } };
 
 /** HUD compacto por cima do jogo: logo, energia, objetivos, dinheiro + tempo,
- * pausa, joystick e botões de acção — ancorado às bordas reais do ecrã
- * (respeitando safe areas) e escalado uniformemente, sem deformar nada. */
+ * pausa, joystick e botões de acção — colado às bordas, centro livre. */
 export class HUDScene extends Phaser.Scene {
   private game_!: GameScene;
-  private L!: Layout;
   private money!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
@@ -30,7 +27,6 @@ export class HUDScene extends Phaser.Scene {
   private tooltipText!: Phaser.GameObjects.Text;
   private tooltipMsg = "";
   private staminaFill!: Phaser.GameObjects.Rectangle;
-  private staminaWidth = 82;
   private staminaPct!: Phaser.GameObjects.Text;
   private rushText!: Phaser.GameObjects.Text;
   private isPaused = false;
@@ -41,11 +37,6 @@ export class HUDScene extends Phaser.Scene {
   private objPanel!: Phaser.GameObjects.Container;
   private objPanelItems: { label: Phaser.GameObjects.Text; status: Phaser.GameObjects.Text }[] = [];
   private powerDot!: Phaser.GameObjects.Arc;
-  /** Painel compacto de fase (objectivos em tempo real). */
-  private phaseTitle!: Phaser.GameObjects.Text;
-  private phaseLines: Phaser.GameObjects.Text[] = [];
-  private phaseStars!: Phaser.GameObjects.Text;
-  private phaseCard!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("HUD");
@@ -53,75 +44,41 @@ export class HUDScene extends Phaser.Scene {
 
   create(): void {
     this.game_ = this.scene.get("Game") as GameScene;
-    this.objPanelItems = [];
-    const l = (this.L = layoutOf(this));
-    const s = l.s;
+    const { width, height } = this.scale;
 
     // ---------------- canto superior esquerdo: logo, energia, objetivos
     this.add
-      .text(l.left, l.top - s(6), "LOTADOR", {
-        fontFamily: FONT.display,
-        fontSize: l.font(22),
-        color: HEX.gold,
-      })
-      .setStroke(HEX.dark, Math.max(2, s(4)))
+      .text(HUD_MARGIN, 6, "LOTADOR", { fontFamily: FONT.display, fontSize: "22px", color: HEX.gold })
+      .setStroke(HEX.dark, 4)
       .setOrigin(0)
       .setScrollFactor(0);
 
-    const energyY = l.top + s(28);
-    const energyH = s(22);
-    this.card(l.left, energyY, s(152), energyH);
+    this.card(HUD_MARGIN, 34, 152, 22);
     this.add
-      .text(l.left + s(8), energyY + energyH / 2, "⚡", { fontSize: l.font(13), color: HEX.yellow })
+      .text(24, 45, "⚡", { fontSize: "13px", color: HEX.yellow })
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
-    this.staminaWidth = s(82);
-    const barX = l.left + s(26);
-    this.add
-      .rectangle(barX, energyY + energyH / 2, this.staminaWidth, s(8), 0x000000, 0.55)
-      .setOrigin(0, 0.5);
-    this.staminaFill = this.add
-      .rectangle(barX, energyY + energyH / 2, this.staminaWidth, s(8), 0x36b45a)
-      .setOrigin(0, 0.5);
+    this.add.rectangle(42, 45, 82, 8, 0x000000, 0.55).setOrigin(0, 0.5);
+    this.staminaFill = this.add.rectangle(42, 45, 82, 8, 0x36b45a).setOrigin(0, 0.5);
     this.staminaPct = this.add
-      .text(l.left + s(114), energyY + energyH / 2, "100%", {
-        fontFamily: FONT.display,
-        fontSize: l.font(11),
-        color: HEX.white,
-      })
+      .text(130, 45, "100%", { fontFamily: FONT.display, fontSize: "11px", color: HEX.white })
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
 
-    const objY = energyY + energyH + s(6);
-    const objW = s(110);
-    const objH = s(26);
     const objZone = this.add
-      .rectangle(l.left, objY, objW, objH)
+      .rectangle(HUD_MARGIN, 62, 110, 24)
       .setOrigin(0)
       .setAlpha(0.01)
       .setInteractive({ useHandCursor: true });
-    this.card(l.left, objY, objW, objH);
+    this.card(HUD_MARGIN, 62, 110, 24);
+    this.add.text(26, 74, "🎯", { fontSize: "12px" }).setOrigin(0, 0.5).setScrollFactor(0);
     this.add
-      .text(l.left + s(10), objY + objH / 2, "🎯", { fontSize: l.font(12) })
+      .text(44, 74, "OBJ.", { fontFamily: FONT.display, fontSize: "11px", color: HEX.white })
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
-    this.add
-      .text(l.left + s(28), objY + objH / 2, "OBJ.", {
-        fontFamily: FONT.display,
-        fontSize: l.font(11),
-        color: HEX.white,
-      })
-      .setOrigin(0, 0.5)
-      .setScrollFactor(0);
-    this.add
-      .circle(l.left + objW - s(24), objY + objH / 2, s(9), 0xffc31f)
-      .setStrokeStyle(2, 0x0e1a33);
+    this.add.circle(102, 74, 9, 0xffc31f).setStrokeStyle(2, 0x0e1a33);
     this.objBadge = this.add
-      .text(l.left + objW - s(24), objY + objH / 2, "0", {
-        fontFamily: FONT.display,
-        fontSize: l.font(10),
-        color: HEX.dark,
-      })
+      .text(102, 74, "0", { fontFamily: FONT.display, fontSize: "10px", color: HEX.dark })
       .setOrigin(0.5)
       .setScrollFactor(0);
     objZone.on("pointerdown", () => {
@@ -130,53 +87,47 @@ export class HUDScene extends Phaser.Scene {
       this.registry.set("objectivesOpen", this.objPanel.visible);
     });
     this.registry.set("objectivesOpen", false);
-    this.buildObjectivesPanel(objY + objH + s(6));
-    this.buildPhaseHud(objY + objH + s(6));
+    this.buildObjectivesPanel();
 
     // ---------------- canto superior direito: [💰 Kz | ⏱ tempo] [Ⅱ]
-    const pauseR = Math.max(16, s(15));
-    const cardH = s(30);
-    const cardW = Math.min(s(180), Math.max(s(120), l.innerWidth - pauseR * 2 - s(180)));
-    const cardY = l.top;
-    const cardX = l.right - pauseR * 2 - s(8) - cardW;
+    const cardW = 180;
+    const cardH = 30;
+    const cardX = width - HUD_MARGIN - 30 - 8 - cardW;
+    const cardY = 10;
     this.card(cardX, cardY, cardW, cardH, 0.78);
     this.money = this.add
-      .text(cardX + s(10), cardY + cardH / 2, "💰 0 Kz", {
+      .text(cardX + 10, cardY + cardH / 2, "💰 0 Kz", {
         fontFamily: FONT.display,
-        fontSize: l.font(14),
+        fontSize: "14px",
         color: HEX.gold,
       })
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
-    this.add.rectangle(cardX + cardW / 2, cardY + cardH / 2, 2, cardH - s(12), 0xffc31f, 0.45);
+    this.add.rectangle(cardX + cardW / 2, cardY + cardH / 2, 2, cardH - 12, 0xffc31f, 0.45);
     this.timer = this.add
-      .text(cardX + cardW - s(8), cardY + cardH / 2, "⏱ 3:00", {
+      .text(cardX + cardW - 8, cardY + cardH / 2, "⏱ 3:00", {
         fontFamily: FONT.display,
-        fontSize: l.font(14),
+        fontSize: "14px",
         color: HEX.white,
       })
       .setOrigin(1, 0.5)
       .setScrollFactor(0);
 
-    const pauseX = l.right - pauseR;
+    const pauseX = width - HUD_MARGIN - 15;
     const pause = this.add
-      .circle(pauseX, cardY + cardH / 2, pauseR, 0x0e1a33, 0.85)
+      .circle(pauseX, cardY + cardH / 2, 15, 0x0e1a33, 0.85)
       .setStrokeStyle(2, 0xffc31f, 0.8)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(pauseX, cardY + cardH / 2, "Ⅱ", {
-        fontFamily: FONT.display,
-        fontSize: l.font(13),
-        color: HEX.white,
-      })
+      .text(pauseX, cardY + cardH / 2, "Ⅱ", { fontFamily: FONT.display, fontSize: "13px", color: HEX.white })
       .setOrigin(0.5)
       .setScrollFactor(0);
     pause.on("pointerdown", () => this.events.emit("hud-pause"));
 
     this.comboText = this.add
-      .text(l.right, cardY + cardH + s(6), "COMBO x1", {
+      .text(width - HUD_MARGIN, cardY + cardH + 6, "COMBO x1", {
         fontFamily: FONT.display,
-        fontSize: l.font(12),
+        fontSize: "12px",
         color: HEX.yellow,
       })
       .setOrigin(1, 0)
@@ -185,17 +136,27 @@ export class HUDScene extends Phaser.Scene {
 
     // ---------------- topo centro: apenas eventos temporários
     this.rushText = this.add
-      .text(l.cx, l.top + s(8), "HORA DE PONTA!", {
+      .text(width / 2, 24, "HORA DE PONTA!", {
         fontFamily: FONT.display,
-        fontSize: l.font(14),
+        fontSize: "14px",
         color: HEX.red,
       })
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setVisible(false);
-
+    // ---------------- tutorial: destaque pulsante + tooltip compacto
+    this.hudPos = {
+      joystick: { x: 84, y: height - 76, r: 60 },
+      call: { x: width - 52, y: height - 140, r: 42 },
+      interact: { x: width - 124, y: height - 99, r: 30 },
+      run: { x: width - 52, y: height - 58, r: 42 },
+      energy: { x: 92, y: 45, r: 42 },
+      objectives: { x: 71, y: 74, r: 44 },
+      money: { x: cardX + cardW / 2, y: cardY + cardH / 2, r: 46 },
+      timer: { x: cardX + cardW - 52, y: cardY + cardH / 2, r: 30 },
+    };
     this.highlightRing = this.add
-      .circle(0, 0, s(40), 0x000000, 0)
+      .circle(0, 0, 40, 0x000000, 0)
       .setStrokeStyle(3, 0xffc31f, 0.95)
       .setVisible(false)
       .setDepth(1590);
@@ -209,30 +170,13 @@ export class HUDScene extends Phaser.Scene {
     });
     this.tooltipBox = this.add.graphics().setDepth(1600).setVisible(false);
     this.tooltipText = this.add
-      .text(0, 0, "", { fontFamily: FONT.body, fontSize: l.font(13), color: HEX.white })
+      .text(0, 0, "", { fontFamily: FONT.body, fontSize: "13px", color: HEX.white })
       .setOrigin(0.5)
       .setDepth(1601)
       .setVisible(false);
 
     this.buildTouchControls();
-
-    // ---------------- tutorial: destaque pulsante + tooltip compacto
-    this.hudPos = {
-      joystick: { x: this.stickBase.x, y: this.stickBase.y, r: this.stickBase.radius + s(10) },
-      call: { x: this.callBtn.x, y: this.callBtn.y, r: this.callBtn.radius + s(8) },
-      interact: {
-        x: this.interactBtn.x,
-        y: this.interactBtn.y,
-        r: this.interactBtn.radius + s(10),
-      },
-      run: { x: this.runBtn.x, y: this.runBtn.y, r: this.runBtn.radius + s(8) },
-      energy: { x: l.left + s(76), y: energyY + energyH / 2, r: s(42) },
-      objectives: { x: l.left + objW / 2, y: objY + objH / 2, r: s(44) },
-      money: { x: cardX + cardW / 2, y: cardY + cardH / 2, r: s(46) },
-      timer: { x: cardX + cardW - s(52), y: cardY + cardH / 2, r: s(30) },
-    };
-
-    if (this.game_.tutorialMode) this.buildTutorialIntro(l);
+    if (this.game_.tutorialMode) this.buildTutorialIntro(width, height);
 
     this.registry.set("runHeld", false);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.registry.set("runHeld", false));
@@ -253,18 +197,18 @@ export class HUDScene extends Phaser.Scene {
       if (!this.isPaused) this.events.emit("hud-pause");
     });
 
-    // O HUD é reconstruído no resize/rotação para recalcular todas as âncoras.
-    restartOnResize(this);
+    // O HUD é reconstruído no resize para recalcular todas as âncoras reais.
+    const refreshLayout = () => {
+      if (this.scene.isActive()) this.scene.restart();
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, refreshLayout);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, refreshLayout);
+    });
   }
 
   /** Cartão escuro compacto com cantos arredondados (fundo do HUD). */
-  private card(
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    alpha = 0.72,
-  ): Phaser.GameObjects.Graphics {
+  private card(x: number, y: number, w: number, h: number, alpha = 0.72): Phaser.GameObjects.Graphics {
     const g = this.add.graphics();
     const r = Math.min(11, h / 2);
     g.fillStyle(0x0e1a33, alpha);
@@ -274,34 +218,27 @@ export class HUDScene extends Phaser.Scene {
     return g;
   }
 
-  /** Painel de objetivos (fase ou missões), aberto pelo botão OBJ. */
-  private buildObjectivesPanel(topY: number): void {
-    const l = this.L;
-    const levelObjs = this.game_.levelMgr?.objectives.progress;
-    const rows = levelObjs ?? this.game_.missions.progress;
-    const w = Math.min(l.s(280), l.innerWidth * 0.62);
-    const rowH = l.s(22);
-    const pad = l.s(10);
-    const h = Math.max(1, rows.length) * rowH + pad * 2;
-    const container = this.add.container(l.left, topY).setDepth(1500).setVisible(false);
+  /** Painel de objetivos (dados reais do MissionManager), aberto pelo botão OBJ. */
+  private buildObjectivesPanel(): void {
+    const missions = this.game_.missions.progress;
+    const w = 262;
+    const rowH = 22;
+    const pad = 10;
+    const h = missions.length * rowH + pad * 2;
+    const container = this.add.container(HUD_MARGIN, 94).setDepth(1500).setVisible(false);
     const bg = this.add.graphics();
     bg.fillStyle(0x0e1a33, 0.94);
     bg.fillRoundedRect(0, 0, w, h, 12);
     bg.lineStyle(2, 0xffc31f, 0.6);
     bg.strokeRoundedRect(0, 0, w, h, 12);
     container.add(bg);
-    rows.forEach((m, i) => {
+    missions.forEach((m, i) => {
       const cy = pad + i * rowH + rowH / 2;
-      const name = "def" in m ? m.def.label : (m as { def: { label: string } }).def.label;
       const label = this.add
-        .text(pad, cy, name, {
-          fontFamily: FONT.display,
-          fontSize: l.font(11),
-          color: HEX.white,
-        })
+        .text(pad, cy, m.def.label, { fontFamily: FONT.display, fontSize: "11px", color: HEX.white })
         .setOrigin(0, 0.5);
       const status = this.add
-        .text(w - pad, cy, "", { fontFamily: FONT.display, fontSize: l.font(11), color: HEX.muted })
+        .text(w - pad, cy, "", { fontFamily: FONT.display, fontSize: "11px", color: HEX.muted })
         .setOrigin(1, 0.5);
       container.add([label, status]);
       this.objPanelItems.push({ label, status });
@@ -309,105 +246,35 @@ export class HUDScene extends Phaser.Scene {
     this.objPanel = container;
   }
 
-  /**
-   * HUD compacto da fase — canto superior esquerdo, abaixo de OBJ.
-   * Mostra FASE N, objectivos principais e estrelas preview sem cobrir o jogo.
-   */
-  private buildPhaseHud(topY: number): void {
-    const l = this.L;
-    const s = l.s;
-    this.phaseLines = [];
-    const mgr = this.game_.levelMgr;
-    if (!mgr) {
-      // Placeholders invisíveis para o update não falhar
-      this.phaseTitle = this.add.text(0, 0, "").setVisible(false);
-      this.phaseStars = this.add.text(0, 0, "").setVisible(false);
-      this.phaseCard = this.add.graphics().setVisible(false);
-      return;
-    }
-
-    const w = Math.min(s(168), l.innerWidth * 0.38);
-    const maxRows = Math.min(4, mgr.def.objectives.length);
-    const h = s(18) + maxRows * s(14) + s(16);
-    this.phaseCard = this.add.graphics().setScrollFactor(0).setDepth(900);
-    this.phaseCard.fillStyle(0x0e1a33, 0.72);
-    this.phaseCard.fillRoundedRect(l.left, topY, w, h, 10);
-    this.phaseCard.lineStyle(1, 0xffc31f, 0.35);
-    this.phaseCard.strokeRoundedRect(l.left, topY, w, h, 10);
-
-    this.phaseTitle = this.add
-      .text(l.left + s(8), topY + s(4), `FASE ${mgr.phaseId}`, {
-        fontFamily: FONT.display,
-        fontSize: l.font(11),
-        color: HEX.yellow,
-      })
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(901);
-
-    this.phaseStars = this.add
-      .text(l.left + w - s(8), topY + s(4), "☆☆☆", {
-        fontFamily: FONT.display,
-        fontSize: l.font(10),
-        color: HEX.muted,
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setDepth(901);
-
-    for (let i = 0; i < maxRows; i++) {
-      const line = this.add
-        .text(l.left + s(8), topY + s(18) + i * s(14), "", {
-          fontFamily: FONT.body,
-          fontSize: l.font(10),
-          color: HEX.white,
-        })
-        .setOrigin(0, 0)
-        .setScrollFactor(0)
-        .setDepth(901);
-      this.phaseLines.push(line);
-    }
-  }
-
-  private callBtn!: Phaser.GameObjects.Arc;
-  private runBtn!: Phaser.GameObjects.Arc;
-  private interactBtn!: Phaser.GameObjects.Arc;
-
   private buildTouchControls(): void {
-    const l = this.L;
-    const s = l.s;
+    const { width, height } = this.scale;
     // O controlo é ancorado no HUD: nunca segue o toque nem pode ser arrastado.
-    // Raio mínimo garante uma área de toque confortável (≥44px) em ecrãs baixos.
-    const stickRadius = Math.max(42, s(50));
-    const stickX = l.left + stickRadius + s(6);
-    const stickY = l.bottom - stickRadius - s(6);
+    const stickX = 84;
+    const stickY = height - 76;
+    const stickRadius = 50;
     this.stickBase = this.add
       .circle(stickX, stickY, stickRadius, 0xffffff, 0.1)
       .setStrokeStyle(2, 0xffc31f, 0.55)
       .setScrollFactor(0);
-    this.stickThumb = this.add
-      .circle(stickX, stickY, stickRadius * 0.4, 0xffc31f, 0.6)
-      .setScrollFactor(0);
+    this.stickThumb = this.add.circle(stickX, stickY, 20, 0xffc31f, 0.6).setScrollFactor(0);
 
-    // Stick activa em toda a metade esquerda (origem no toque) — convenção mobile.
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      if (p.x >= l.width / 2 || this.stickId !== -1) return;
-      // Evita capturar toques nos botões de acção (direita) e no topo (HUD).
-      if (p.y < l.top + s(60)) return;
-      this.stickId = p.id;
-      this.stickBase.setPosition(p.x, p.y);
-      this.stickThumb.setPosition(p.x, p.y);
-      this.registry.set("joystick", { x: 0, y: 0, run: false });
+      const distance = Phaser.Math.Distance.Between(p.x, p.y, stickX, stickY);
+      if (p.x < width / 2 && distance <= stickRadius + 10 && this.stickId === -1) {
+        this.stickId = p.id;
+        this.stickThumb.setPosition(stickX, stickY);
+      }
     });
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (p.id !== this.stickId) return;
-      const ox = this.stickBase.x;
-      const oy = this.stickBase.y;
-      const dx = p.x - ox;
-      const dy = p.y - oy;
+      const dx = p.x - stickX;
+      const dy = p.y - stickY;
       const len = Math.min(stickRadius, Math.hypot(dx, dy));
       const a = Math.atan2(dy, dx);
-      this.stickThumb.setPosition(ox + Math.cos(a) * len, oy + Math.sin(a) * len);
+      this.stickThumb.setPosition(
+        stickX + Math.cos(a) * len,
+        stickY + Math.sin(a) * len,
+      );
       this.registry.set("joystick", {
         x: (Math.cos(a) * len) / stickRadius,
         y: (Math.sin(a) * len) / stickRadius,
@@ -417,43 +284,27 @@ export class HUDScene extends Phaser.Scene {
     const release = (p: Phaser.Input.Pointer) => {
       if (p.id !== this.stickId) return;
       this.stickId = -1;
-      // Volta à âncora fixa no canto
-      this.stickBase.setPosition(stickX, stickY);
-      this.stickThumb.setPosition(stickX, stickY);
+      this.stickThumb.setPosition(this.stickBase.x, this.stickBase.y);
       this.registry.set("joystick", { x: 0, y: 0, run: false });
     };
     this.input.on("pointerup", release);
     this.input.on("pointerupoutside", release);
 
     // Coluna principal do canto inferior direito: CHAMAR em cima, CORRER em baixo.
-    const big = Math.max(34, s(36)); // ≥44px área de toque confortável
-    const mid = Math.max(28, s(30));
-    const colX = l.right - big;
-    const runY = l.bottom - big;
-    const callY = runY - big * 2 - s(12);
-    this.callBtn = this.actionButton(colX, callY, "🚕", "CHAMAR", 0xffc31f, HEX.dark, () =>
+    this.actionButton(width - 52, height - 140, "🚕", "CHAMAR", 0xffc31f, HEX.dark, () =>
       this.events.emit("hud-call"),
     );
-    this.runBtn = this.actionButton(colX, runY, "🏃", "CORRER", 0x2b5fae, "#f7f4ec", () =>
+    const run = this.actionButton(width - 52, height - 58, "🏃", "CORRER", 0x2b5fae, "#f7f4ec", () =>
       this.registry.set("runHeld", true),
     );
-    this.runBtn.on("pointerup", () => this.registry.set("runHeld", false));
-    this.runBtn.on("pointerout", () => this.registry.set("runHeld", false));
+    run.on("pointerup", () => this.registry.set("runHeld", false));
+    run.on("pointerout", () => this.registry.set("runHeld", false));
 
-    // FALAR (ex-E) e BOOST (ex-Q) — legendas mobile, não teclas de PC.
-    const midX = colX - big - mid - s(8);
-    const interactY = (callY + runY) / 2 + mid * 0.35;
-    const powerY = interactY - mid * 2.1 - s(8);
-    this.interactBtn = this.actionButton(midX, interactY, "🤝", "FALAR", 0x36b45a, HEX.white, () =>
-      this.events.emit("hud-interact"),
-    );
-    // BOOST mais pequeno mas com legenda
-    const boost = this.actionButton(midX, powerY, "⚡", "BOOST", 0x16305c, HEX.white, () =>
-      this.events.emit("hud-power"),
-    );
-    boost.setScale(0.85);
+    // Botões secundários (interagir / power-up), mais pequenos, à esquerda dos principais.
+    this.miniButton(width - 124, height - 99, "E", "hud-interact");
+    this.miniButton(width - 124, height - 158, "Q", "hud-power");
     this.powerDot = this.add
-      .circle(midX + mid * 0.55, powerY - mid * 0.55, Math.max(3, s(4)), 0xffc31f)
+      .circle(width - 108, height - 174, 4, 0xffc31f)
       .setScrollFactor(0)
       .setVisible(false);
 
@@ -470,22 +321,13 @@ export class HUDScene extends Phaser.Scene {
     labelColor: string,
     onDown: () => void,
   ): Phaser.GameObjects.Arc {
-    const l = this.L;
-    const r = Math.max(30, l.s(34));
     const c = this.add
-      .circle(x, y, r, fill, 0.94)
+      .circle(x, y, 34, fill, 0.94)
       .setStrokeStyle(3, 0x0e1a33)
       .setInteractive({ useHandCursor: true });
+    this.add.text(x, y - 8, icon, { fontSize: "18px" }).setOrigin(0.5).setScrollFactor(0);
     this.add
-      .text(x, y - r * 0.24, icon, { fontSize: l.font(18) })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
-    this.add
-      .text(x, y + r * 0.41, label, {
-        fontFamily: FONT.display,
-        fontSize: l.font(10),
-        color: labelColor,
-      })
+      .text(x, y + 14, label, { fontFamily: FONT.display, fontSize: "10px", color: labelColor })
       .setOrigin(0.5)
       .setScrollFactor(0);
     c.on("pointerdown", () => {
@@ -498,69 +340,40 @@ export class HUDScene extends Phaser.Scene {
   }
 
   /** Botão circular secundário (atalhos E / Q). */
-  private miniButton(
-    x: number,
-    y: number,
-    label: string,
-    event: string,
-    r: number,
-  ): Phaser.GameObjects.Arc {
+  private miniButton(x: number, y: number, label: string, event: string): void {
     const c = this.add
-      .circle(x, y, r, 0x16305c, 0.85)
+      .circle(x, y, 24, 0x16305c, 0.85)
       .setStrokeStyle(2, 0xffc31f, 0.5)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(x, y, label, { fontFamily: FONT.display, fontSize: this.L.font(16), color: HEX.white })
+      .text(x, y, label, { fontFamily: FONT.display, fontSize: "16px", color: HEX.white })
       .setOrigin(0.5)
       .setScrollFactor(0);
     c.on("pointerdown", () => this.events.emit(event));
-    return c;
   }
 
   /** Introdução breve do tutorial — pequena, sem cobrir o gameplay. */
-  private buildTutorialIntro(l: Layout): void {
-    const panel = this.add.container(l.cx, l.cy).setDepth(2000);
-    const backdrop = this.add.rectangle(0, 0, l.width, l.height, 0x071225, 0.55).setOrigin(0.5);
-    const cardW = Math.min(l.s(450), l.innerWidth);
-    const cardH = Math.min(l.s(170), l.innerHeight);
-    const card = this.add.rectangle(0, 0, cardW, cardH, 0x16305c, 0.98).setStrokeStyle(3, 0xffc31f);
+  private buildTutorialIntro(width: number, height: number): void {
+    const panel = this.add.container(width / 2, height / 2).setDepth(2000);
+    const backdrop = this.add.rectangle(0, 0, width, height, 0x071225, 0.55).setOrigin(0.5);
+    const card = this.add.rectangle(0, 0, 450, 170, 0x16305c, 0.98).setStrokeStyle(3, 0xffc31f);
     const title = this.add
-      .text(0, -cardH * 0.28, "BEM-VINDO AO LOTADOR!", {
-        fontFamily: FONT.display,
-        fontSize: l.font(22),
-        color: HEX.yellow,
-      })
+      .text(0, -48, "BEM-VINDO AO LOTADOR!", { fontFamily: FONT.display, fontSize: "22px", color: HEX.yellow })
       .setOrigin(0.5);
     const line = this.add
-      .text(
-        0,
-        -cardH * 0.02,
-        "Chama → Fala → Leva ao táxi.\nGanhas Kz por cada passageiro. Completa o objectivo.",
-        {
-          fontFamily: FONT.body,
-          fontSize: l.font(14),
-          color: HEX.white,
-          align: "center",
-          wordWrap: { width: cardW - l.s(40) },
-        },
-      )
+      .text(0, -4, "Ajuda os passageiros a entrar nos táxis e completa\nos objetivos antes do tempo acabar.", {
+        fontFamily: FONT.body,
+        fontSize: "14px",
+        color: HEX.white,
+        align: "center",
+      })
       .setOrigin(0.5);
     const action = this.add
-      .rectangle(
-        0,
-        cardH * 0.31,
-        Math.min(l.s(200), cardW - l.s(40)),
-        Math.max(40, l.s(44)),
-        0xffc31f,
-      )
+      .rectangle(0, 52, 200, 44, 0xffc31f)
       .setStrokeStyle(3, 0x0e1a33)
       .setInteractive({ useHandCursor: true });
     const actionText = this.add
-      .text(0, cardH * 0.31, "COMEÇAR", {
-        fontFamily: FONT.display,
-        fontSize: l.font(20),
-        color: "#0e1a33",
-      })
+      .text(0, 52, "COMEÇAR", { fontFamily: FONT.display, fontSize: "20px", color: "#0e1a33" })
       .setOrigin(0.5);
     action.on("pointerdown", () => {
       audio.ui();
@@ -570,38 +383,30 @@ export class HUDScene extends Phaser.Scene {
     });
     panel.add([backdrop, card, title, line, action, actionText]);
     this.tutorialPanel = panel;
-    this.tweens.add({
-      targets: action,
-      scale: 1.05,
-      duration: 650,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
+    this.tweens.add({ targets: action, scale: 1.05, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
-  /** Posição do tooltip por etapa — derivada das âncoras reais do HUD. */
+  /** Posição do tooltip por etapa — nunca cobre o elemento destacado. */
   private tooltipAnchor(step: TutorialStep): { x: number; y: number } | null {
-    const l = this.L;
-    const p = this.hudPos;
+    const { width, height } = this.scale;
     switch (step) {
       case TutorialStep.MOVE:
-        return { x: p.joystick.x + l.s(12), y: p.joystick.y - p.joystick.r - l.s(22) };
+        return { x: 96, y: height - 156 };
       case TutorialStep.CALL:
-        return { x: p.call.x - l.s(58), y: p.call.y - p.call.r - l.s(18) };
+        return { x: width - 110, y: height - 196 };
       case TutorialStep.CONVINCE:
-        return { x: p.interact.x - l.s(46), y: p.interact.y - p.interact.r - l.s(18) };
+        return { x: width - 170, y: height - 99 };
       case TutorialStep.RUN:
-        return { x: p.run.x - l.s(58), y: p.call.y - p.call.r - l.s(22) };
+        return { x: width - 110, y: height - 200 };
       case TutorialStep.OBJECTIVES:
-        return { x: p.objectives.x + l.s(150), y: p.objectives.y };
+        return { x: 240, y: 74 };
       case TutorialStep.FREE_PLAY:
       case TutorialStep.FIND_PASSENGER:
       case TutorialStep.TAKE_TO_TAXI:
       case TutorialStep.SCORE:
       case TutorialStep.ENERGY:
       case TutorialStep.TIMER:
-        return { x: l.cx, y: l.top + l.s(36) };
+        return { x: width / 2, y: 48 };
       default:
         return null;
     }
@@ -618,19 +423,17 @@ export class HUDScene extends Phaser.Scene {
       this.tooltipText.setText(message);
       this.tooltipMsg = message;
     }
-    const l = this.L;
-    const w = this.tooltipText.width + l.s(24);
-    const h = this.tooltipText.height + l.s(14);
-    const cx = Phaser.Math.Clamp(x, w / 2 + l.left, l.right - w / 2);
-    const cy = Phaser.Math.Clamp(y, h / 2 + l.top, l.bottom - h / 2);
+    const w = this.tooltipText.width + 24;
+    const h = 30;
+    const cx = Phaser.Math.Clamp(x, w / 2 + 8, this.scale.width - w / 2 - 8);
     const g = this.tooltipBox;
     g.clear();
     g.fillStyle(0x0e1a33, 0.92);
-    g.fillRoundedRect(cx - w / 2, cy - h / 2, w, h, 10);
+    g.fillRoundedRect(cx - w / 2, y - h / 2, w, h, 10);
     g.lineStyle(2, 0xffc31f, 0.8);
-    g.strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, 10);
+    g.strokeRoundedRect(cx - w / 2, y - h / 2, w, h, 10);
     g.setVisible(true);
-    this.tooltipText.setPosition(cx, cy).setVisible(true);
+    this.tooltipText.setPosition(cx, y).setVisible(true);
   }
 
   /** Camada guiada: destaque + tooltip conforme a etapa actual do tutorial. */
@@ -663,59 +466,22 @@ export class HUDScene extends Phaser.Scene {
     this.renderTutorial();
 
     const ratio = Phaser.Math.Clamp(g.player.stamina / g.player.maxStamina, 0, 1);
-    this.staminaFill.width = this.staminaWidth * ratio;
+    this.staminaFill.width = 82 * ratio;
     this.staminaFill.fillColor = g.player.tired ? 0xe23b3b : 0x36b45a;
     this.staminaPct.setText(`${Math.round(ratio * 100)}%`);
 
     this.rushText.setVisible(g.isRush);
     this.powerDot.setVisible(g.powerUps.cooldownRatio(this.time.now) >= 1);
 
-    // Objectivos: preferir fase, senão missões
-    const levelMgr = g.levelMgr;
-    if (levelMgr) {
-      const snap = levelMgr.hudSnapshot(g.economy.stats, g.combo.level);
-      const done = snap.objectives.filter((o) => o.done).length;
-      this.objBadge.setText(String(done));
-
-      if (this.phaseTitle?.visible !== false && this.phaseTitle?.active) {
-        this.phaseTitle.setText(`FASE ${snap.phaseId}`);
-        const st = snap.starsPreview;
-        this.phaseStars.setText("★".repeat(st) + "☆".repeat(Math.max(0, 3 - st)));
-        this.phaseStars.setColor(st > 0 ? HEX.gold : HEX.muted);
-
-        snap.objectives.slice(0, this.phaseLines.length).forEach((o, i) => {
-          const line = this.phaseLines[i];
-          if (!line) return;
-          const cur = o.inverted ? o.current : Math.min(o.current, o.goal);
-          const icon = o.done ? "✓" : o.failed ? "✗" : "·";
-          // Labels curtos para mobile
-          const short =
-            o.label.length > 10 ? o.label.slice(0, 9) + "…" : o.label;
-          line.setText(`${icon} ${short} ${cur}/${o.goal}`);
-          line.setColor(o.done ? HEX.green : o.failed ? HEX.red : HEX.white);
-        });
-      }
-
-      if (this.objPanel.visible) {
-        snap.objectives.forEach((o, i) => {
-          const item = this.objPanelItems[i];
-          if (!item) return;
-          const cur = o.inverted ? o.current : Math.min(o.current, o.goal);
-          item.status.setText(o.done ? "✓" : o.failed ? "✗" : `${cur}/${o.goal}`);
-          item.status.setColor(o.done ? HEX.green : o.failed ? HEX.red : HEX.muted);
-        });
-      }
-    } else {
-      const done = g.missions.progress.filter((m) => m.done).length;
-      this.objBadge.setText(String(done));
-      if (this.objPanel.visible) {
-        g.missions.progress.forEach((m, i) => {
-          const item = this.objPanelItems[i];
-          if (!item) return;
-          item.status.setText(m.done ? "✓" : `${Math.min(m.current, m.def.goal)}/${m.def.goal}`);
-          item.status.setColor(m.done ? HEX.green : HEX.muted);
-        });
-      }
+    const done = g.missions.progress.filter((m) => m.done).length;
+    this.objBadge.setText(String(done));
+    if (this.objPanel.visible) {
+      g.missions.progress.forEach((m, i) => {
+        const item = this.objPanelItems[i];
+        if (!item) return;
+        item.status.setText(m.done ? "✓" : `${Math.min(m.current, m.def.goal)}/${m.def.goal}`);
+        item.status.setColor(m.done ? HEX.green : HEX.muted);
+      });
     }
   }
 }

@@ -10,10 +10,6 @@ export default defineConfig({
   // Phaser é uma dependência grande e browser-only. Pré-empacotá-lo evita que o
   // chunk carregado pelo `lazy()` tente buscar um optimized dep inconsistente.
   vite: {
-    server: {
-      host: true,
-      allowedHosts: true,
-    },
     optimizeDeps: {
       include: ["phaser"],
     },
