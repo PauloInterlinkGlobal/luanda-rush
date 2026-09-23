@@ -14,6 +14,8 @@ export function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
     // O jogo usa apenas sprites e gráficos 2D; Canvas evita framebuffers WebGL
     // incompletos em previews/iframes onde o viewport pode iniciar em 0px.
+    // Nunca usar AUTO/WebGL: o preview pode expor um contexto WebGL com
+    // framebuffer incompleto durante a criação do canvas.
     type: Phaser.CANVAS,
     parent,
     // O contentor é full-bleed; RESIZE evita letterbox em qualquer proporção.
