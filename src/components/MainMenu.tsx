@@ -85,8 +85,10 @@ function StatusItem({
 }) {
   return (
     <span className="flex items-center gap-1 whitespace-nowrap text-white">
-      <Icon className="h-3.5 w-3.5 text-[#FFC107]" />
-      <span className="text-[11px] font-semibold leading-none tracking-wide">{children}</span>
+      <Icon className="h-3 w-3 text-[#FFC107] sm:h-3.5 sm:w-3.5" />
+      <span className="text-[10px] font-semibold leading-none tracking-wide sm:text-[11px]">
+        {children}
+      </span>
     </span>
   );
 }
@@ -114,9 +116,9 @@ function MenuButton({
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex w-full items-center gap-3 rounded-xl border border-[#4A6FA5]/70 bg-[#213A5C] px-4 py-2.5 text-left text-sm font-semibold text-white shadow-md transition-all duration-150 hover:border-[#7AA0D6] hover:bg-[#2A4A75] active:scale-[0.99]"
+      className="group relative flex min-h-[44px] w-full items-center gap-2.5 rounded-xl border border-[#4A6FA5]/70 bg-[#213A5C] px-3.5 py-2 text-left text-[13px] font-semibold text-white shadow-md transition-all duration-150 hover:border-[#7AA0D6] hover:bg-[#2A4A75] active:scale-[0.99] sm:gap-3 sm:px-4 sm:py-2.5 sm:text-sm"
     >
-      <Icon className="h-5 w-5 shrink-0 text-white/90 transition-colors group-hover:text-white" />
+      <Icon className="h-[18px] w-[18px] shrink-0 text-white/90 transition-colors group-hover:text-white sm:h-5 sm:w-5" />
       <span className="tracking-wide">{label}</span>
       {badge ? <NotifyBadge /> : null}
     </button>
@@ -143,11 +145,11 @@ function HowToColumn({
         highlight ? "rounded-lg bg-white/[0.04]" : ""
       }`}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wider text-[#9FB4D6]">
+      <span className="text-[9px] font-medium uppercase tracking-wider text-[#9FB4D6] sm:text-[10px]">
         {title}
       </span>
-      <Icon className="h-7 w-7 text-white" strokeWidth={1.75} />
-      <span className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-white">
+      <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.75} />
+      <span className="text-[9px] font-semibold uppercase leading-tight tracking-wide text-white sm:text-[10px]">
         {caption}
       </span>
     </div>
@@ -206,15 +208,17 @@ export default function MainMenu({
         <div className="absolute inset-0 bg-[#0D1B2A]/70" aria-hidden />
       </div>
 
-      {/* ════════ PAINEL PRINCIPAL ════════ */}
+      {/* ════════ PAINEL PRINCIPAL (mobile-first) ════════
+          Largura: quase ecrã inteiro no telemóvel, limitada e a crescer
+          em tablet/PC. Altura limitada ao viewport com scroll interno. */}
       <div
-        className="relative flex max-h-[100dvh] w-full max-w-[420px] flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-[#1A2642]/90 p-4 shadow-2xl sm:p-5"
+        className="relative flex max-h-[100dvh] w-[calc(100%-1rem)] max-w-[380px] flex-col gap-2.5 overflow-y-auto rounded-2xl border border-white/10 bg-[#1A2642]/90 p-3 shadow-2xl sm:w-[calc(100%-2rem)] sm:max-w-[420px] sm:gap-3 sm:p-4 md:max-w-[440px] lg:max-w-[460px]"
         style={{ backdropFilter: "blur(6px)" }}
       >
         {/* ── TOPO: Título + subtítulo ── */}
-        <header className="flex flex-col items-center pt-1 text-center">
+        <header className="flex flex-col items-center pt-0.5 text-center">
           <h1
-            className="text-4xl font-extrabold uppercase leading-none tracking-tight text-[#FFC107] sm:text-5xl"
+            className="text-3xl font-extrabold uppercase leading-none tracking-tight text-[#FFC107] sm:text-4xl md:text-5xl"
             style={{
               textShadow:
                 "0 0 12px rgba(255,152,0,0.85), 0 0 28px rgba(255,152,0,0.45), 0 2px 4px rgba(0,0,0,0.6)",
@@ -222,13 +226,13 @@ export default function MainMenu({
           >
             LOTADOR
           </h1>
-          <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.35em] text-white sm:text-xs">
+          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.3em] text-white sm:text-[11px] sm:tracking-[0.35em] md:text-xs">
             Chama, Lota, Ganha
           </p>
         </header>
 
         {/* ── BARRA DE ESTADO (pílula) ── */}
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-full border border-[#4A6FA5]/60 bg-[#0F1C33] px-4 py-2 shadow-inner">
+        <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 rounded-full border border-[#4A6FA5]/60 bg-[#0F1C33] px-3 py-1.5 shadow-inner sm:gap-x-3 sm:px-4 sm:py-2">
           <StatusItem icon={Star}>
             NÍVEL <span className="text-[#FFD700]">{level}</span>
           </StatusItem>
@@ -252,18 +256,18 @@ export default function MainMenu({
         <button
           type="button"
           onClick={onPlay}
-          className="group relative flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-[#1A2642] shadow-lg transition-transform duration-150 hover:scale-[1.02] active:scale-[0.99]"
+          className="group relative flex min-h-[48px] w-full items-center justify-between rounded-xl px-3.5 py-3 text-[#1A2642] shadow-lg transition-transform duration-150 hover:scale-[1.02] active:scale-[0.99] sm:px-4 sm:py-3.5"
           style={{
             background: "linear-gradient(180deg,#FFD700 0%,#FBC02D 100%)",
             boxShadow:
               "0 6px 16px rgba(255,193,7,0.45), 0 0 22px rgba(255,152,0,0.35), inset 0 1px 0 rgba(255,255,255,0.5)",
           }}
         >
-          <Play className="h-6 w-6 fill-current" />
-          <span className="text-xl font-extrabold uppercase tracking-wider drop-shadow-sm">
+          <Play className="h-5 w-5 fill-current sm:h-6 sm:w-6" />
+          <span className="text-lg font-extrabold uppercase tracking-wider drop-shadow-sm sm:text-xl">
             Jogar
           </span>
-          <Users className="h-6 w-6" />
+          <Users className="h-5 w-5 sm:h-6 sm:w-6" />
           {/* Badge de notificação no canto superior direito do JOGAR. */}
           <NotifyBadge />
         </button>
